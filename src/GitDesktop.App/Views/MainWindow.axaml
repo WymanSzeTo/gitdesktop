@@ -51,6 +51,12 @@
                         HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
                 <Button Content="History"  Command="{Binding ShowHistoryCommand}"
                         HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
+                <Button Content="Tags"     Command="{Binding ShowTagsCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
+                <Button Content="Remotes"  Command="{Binding ShowRemotesCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
+                <Button Content="Stash"    Command="{Binding ShowStashCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
             </StackPanel>
         </Border>
 
@@ -71,6 +77,21 @@
                 <!-- History view -->
                 <DataTemplate DataType="vm:HistoryViewModel">
                     <views:HistoryView/>
+                </DataTemplate>
+
+                <!-- Tags view -->
+                <DataTemplate DataType="vm:TagsViewModel">
+                    <views:TagsView/>
+                </DataTemplate>
+
+                <!-- Remotes view -->
+                <DataTemplate DataType="vm:RemotesViewModel">
+                    <views:RemotesView/>
+                </DataTemplate>
+
+                <!-- Stash view -->
+                <DataTemplate DataType="vm:StashViewModel">
+                    <views:StashView/>
                 </DataTemplate>
 
             </ContentControl.DataTemplates>

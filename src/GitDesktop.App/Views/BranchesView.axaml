@@ -22,11 +22,16 @@
             <ListBox.ItemTemplate>
                 <DataTemplate>
                     <DockPanel>
-                        <!-- Switch / Delete buttons for local non-current branches -->
+                        <!-- Switch / Delete / Merge buttons for local non-current branches -->
                         <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4"
                                     IsVisible="{Binding IsLocal}">
                             <Button Content="Switch"
                                     Command="{Binding $parent[UserControl].((vm:BranchesViewModel)DataContext).SwitchBranchCommand}"
+                                    CommandParameter="{Binding}"
+                                    IsEnabled="{Binding !IsCurrentBranch}"
+                                    Padding="6,2"/>
+                            <Button Content="Merge"
+                                    Command="{Binding $parent[UserControl].((vm:BranchesViewModel)DataContext).MergeBranchCommand}"
                                     CommandParameter="{Binding}"
                                     IsEnabled="{Binding !IsCurrentBranch}"
                                     Padding="6,2"/>

@@ -12,6 +12,23 @@
                 <TextBlock Text="Commit History" FontWeight="Bold" FontSize="14"
                            VerticalAlignment="Center"/>
                 <Button Content="↻ Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0"/>
+                <Separator Width="1" Background="#555" Margin="4,0"/>
+                <Button Content="Cherry-pick"
+                        Command="{Binding CherryPickCommand}"
+                        CommandParameter="{Binding SelectedCommit}"
+                        ToolTip.Tip="Cherry-pick the selected commit" Padding="6,2"/>
+                <Button Content="Revert"
+                        Command="{Binding RevertCommand}"
+                        CommandParameter="{Binding SelectedCommit}"
+                        ToolTip.Tip="Revert the selected commit" Padding="6,2"/>
+                <Button Content="Reset"
+                        Command="{Binding ResetToCommitCommand}"
+                        CommandParameter="{Binding SelectedCommit}"
+                        ToolTip.Tip="Reset HEAD to the selected commit (mixed)" Padding="6,2"
+                        Foreground="#f48771"/>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="#888" FontSize="12"
+                           VerticalAlignment="Center" Margin="8,0,0,0"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
             </StackPanel>
         </Border>
 

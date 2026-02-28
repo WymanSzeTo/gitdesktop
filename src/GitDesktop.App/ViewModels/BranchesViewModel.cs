@@ -16,6 +16,7 @@ public sealed class BranchesViewModel : ViewModelBase
     private bool _isLoading;
     private Branch? _selectedBranch;
     private string _newBranchName = string.Empty;
+    private string _renameBranchNewName = string.Empty;
     private string? _statusMessage;
 
     public BranchesViewModel(GitDesktopClient client, string repoPath)
@@ -28,6 +29,8 @@ public sealed class BranchesViewModel : ViewModelBase
         SwitchBranchCommand = new AsyncRelayCommand<Branch>(SwitchBranchAsync);
         CreateBranchCommand = new AsyncRelayCommand(CreateBranchAsync, CanCreateBranch);
         DeleteBranchCommand = new AsyncRelayCommand<Branch>(DeleteBranchAsync);
+        RenameBranchCommand = new AsyncRelayCommand<Branch>(RenameBranchAsync);
+        MergeBranchCommand = new AsyncRelayCommand<Branch>(MergeBranchAsync);
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
     }
 
@@ -56,6 +59,13 @@ public sealed class BranchesViewModel : ViewModelBase
         }
     }
 
+    /// <summary>Gets or sets the new name when renaming a branch.</summary>
+    public string RenameBranchNewName
+    {
+        get => _renameBranchNewName;
+        set => SetField(ref _renameBranchNewName, value);
+    }
+
     /// <summary>Gets or sets a transient status message shown to the user.</summary>
     public string? StatusMessage
     {
@@ -74,6 +84,12 @@ public sealed class BranchesViewModel : ViewModelBase
 
     /// <summary>Command to delete a branch.</summary>
     public ICommand DeleteBranchCommand { get; }
+
+    /// <summary>Command to rename a branch.</summary>
+    public ICommand RenameBranchCommand { get; }
+
+    /// <summary>Command to merge a branch into the current branch.</summary>
+    public ICommand MergeBranchCommand { get; }
 
     /// <summary>Command to refresh the branches list.</summary>
     public ICommand RefreshCommand { get; }
@@ -124,6 +140,30 @@ public sealed class BranchesViewModel : ViewModelBase
         if (branch == null || !branch.IsLocal || branch.IsCurrentBranch) return;
         var result = await _client.Branch.DeleteAsync(_repoPath, branch.Name);
         StatusMessage = result.Success ? $"Branch '{branch.Name}' deleted." : result.Error;
+        await RefreshAsync();
+    }
+
+    private async Task RenameBranchAsync(Branch? branch)
+    {
+        if (branch == null || !branch.IsLocal || string.IsNullOrWhiteSpace(RenameBranchNewName)) return;
+        var result = await _client.Branch.RenameAsync(_repoPath, branch.Name, RenameBranchNewName);
+        if (result.Success)
+        {
+            StatusMessage = $"Branch '{branch.Name}' renamed to '{RenameBranchNewName}'.";
+            RenameBranchNewName = string.Empty;
+            await RefreshAsync();
+        }
+        else
+        {
+            StatusMessage = result.Error;
+        }
+    }
+
+    private async Task MergeBranchAsync(Branch? branch)
+    {
+        if (branch == null || branch.IsCurrentBranch) return;
+        var result = await _client.MergeRebase.MergeAsync(_repoPath, branch.Name);
+        StatusMessage = result.Success ? $"Merged '{branch.Name}' into current branch." : result.Error;
         await RefreshAsync();
     }
 

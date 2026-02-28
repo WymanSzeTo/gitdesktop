@@ -29,6 +29,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         ShowStatusCommand = new RelayCommand(ShowStatus, () => _isRepoOpen);
         ShowBranchesCommand = new RelayCommand(ShowBranches, () => _isRepoOpen);
         ShowHistoryCommand = new RelayCommand(ShowHistory, () => _isRepoOpen);
+        ShowTagsCommand = new RelayCommand(ShowTags, () => _isRepoOpen);
+        ShowRemotesCommand = new RelayCommand(ShowRemotes, () => _isRepoOpen);
+        ShowStashCommand = new RelayCommand(ShowStash, () => _isRepoOpen);
     }
 
     /// <summary>Gets or sets the path to the repository to open.</summary>
@@ -72,6 +75,15 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// <summary>Gets the <see cref="HistoryViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
     public HistoryViewModel? HistoryVM { get; private set; }
 
+    /// <summary>Gets the <see cref="TagsViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
+    public TagsViewModel? TagsVM { get; private set; }
+
+    /// <summary>Gets the <see cref="RemotesViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
+    public RemotesViewModel? RemotesVM { get; private set; }
+
+    /// <summary>Gets the <see cref="StashViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
+    public StashViewModel? StashVM { get; private set; }
+
     /// <summary>Command to open a repository from <see cref="RepoPath"/>.</summary>
     public ICommand OpenRepositoryCommand { get; }
 
@@ -93,6 +105,15 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// <summary>Command to navigate to the History view.</summary>
     public ICommand ShowHistoryCommand { get; }
 
+    /// <summary>Command to navigate to the Tags view.</summary>
+    public ICommand ShowTagsCommand { get; }
+
+    /// <summary>Command to navigate to the Remotes view.</summary>
+    public ICommand ShowRemotesCommand { get; }
+
+    /// <summary>Command to navigate to the Stash view.</summary>
+    public ICommand ShowStashCommand { get; }
+
     /// <summary>Opens a repository at <see cref="RepoPath"/> and loads initial data.</summary>
     public async Task OpenRepositoryAsync()
     {
@@ -110,10 +131,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         StatusVM = new StatusViewModel(_client, RepoPath);
         BranchesVM = new BranchesViewModel(_client, RepoPath);
         HistoryVM = new HistoryViewModel(_client, RepoPath);
+        TagsVM = new TagsViewModel(_client, RepoPath);
+        RemotesVM = new RemotesViewModel(_client, RepoPath);
+        StashVM = new StashViewModel(_client, RepoPath);
 
         OnPropertyChanged(nameof(StatusVM));
         OnPropertyChanged(nameof(BranchesVM));
         OnPropertyChanged(nameof(HistoryVM));
+        OnPropertyChanged(nameof(TagsVM));
+        OnPropertyChanged(nameof(RemotesVM));
+        OnPropertyChanged(nameof(StashVM));
 
         ((AsyncRelayCommand)FetchCommand).RaiseCanExecuteChanged();
         ((AsyncRelayCommand)PullCommand).RaiseCanExecuteChanged();
@@ -121,6 +148,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         ((RelayCommand)ShowStatusCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ShowBranchesCommand).RaiseCanExecuteChanged();
         ((RelayCommand)ShowHistoryCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ShowTagsCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ShowRemotesCommand).RaiseCanExecuteChanged();
+        ((RelayCommand)ShowStashCommand).RaiseCanExecuteChanged();
 
         // Start on status view and load data in parallel
         ShowStatus();
@@ -143,6 +173,21 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void ShowHistory()
     {
         if (HistoryVM != null) CurrentView = HistoryVM;
+    }
+
+    private void ShowTags()
+    {
+        if (TagsVM != null) CurrentView = TagsVM;
+    }
+
+    private void ShowRemotes()
+    {
+        if (RemotesVM != null) CurrentView = RemotesVM;
+    }
+
+    private void ShowStash()
+    {
+        if (StashVM != null) CurrentView = StashVM;
     }
 
     private async Task FetchAsync()
