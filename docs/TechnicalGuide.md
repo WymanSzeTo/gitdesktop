@@ -38,10 +38,13 @@ gitdesktop/
 │   │   ├── Execution/           IGitExecutor, GitResult, executors
 │   │   ├── Models/              Immutable domain models
 │   │   └── Services/            One service class per git domain area
-│   ├── GitDesktop.App/          App entry-point
+│   ├── GitDesktop.App/          Avalonia UI desktop application
+│   │   ├── ViewModels/          MVVM ViewModels (MainWindow, Status, Branches, History)
+│   │   └── Views/               Avalonia XAML views
 │   └── GitDesktop.Cli/          CLI dispatcher
 ├── tests/
-│   └── GitDesktop.Core.Tests/   Unit tests (MockGitExecutor)
+│   ├── GitDesktop.Core.Tests/   Unit tests (MockGitExecutor)
+│   └── GitDesktop.App.Tests/    ViewModel unit tests
 └── docs/                        Documentation (this file)
 ```
 

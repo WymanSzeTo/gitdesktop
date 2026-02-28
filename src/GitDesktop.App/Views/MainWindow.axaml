@@ -1,0 +1,80 @@
+<Window xmlns="https://github.com/avaloniaui"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="using:GitDesktop.App.ViewModels"
+        xmlns:views="using:GitDesktop.App.Views"
+        x:Class="GitDesktop.App.Views.MainWindow"
+        x:DataType="vm:MainWindowViewModel"
+        Title="{Binding Title}"
+        Width="1200" Height="750"
+        MinWidth="800" MinHeight="500">
+
+    <DockPanel>
+
+        <!-- ── Top toolbar ──────────────────────────────────────────── -->
+        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
+                    Background="#2d2d2d" Margin="0">
+            <TextBlock Text="GitDesktop" FontWeight="Bold" FontSize="16"
+                       VerticalAlignment="Center" Margin="12,8" Foreground="White"/>
+            <Separator Width="1" Background="#555" Margin="0,4"/>
+            <Button Content="Fetch" Command="{Binding FetchCommand}"
+                    Margin="4,4" ToolTip.Tip="Fetch from all remotes (prune)"/>
+            <Button Content="Pull"  Command="{Binding PullCommand}"
+                    Margin="0,4" ToolTip.Tip="Pull from upstream"/>
+            <Button Content="Push"  Command="{Binding PushCommand}"
+                    Margin="0,4" ToolTip.Tip="Push to remote"/>
+        </StackPanel>
+
+        <!-- ── Status bar ────────────────────────────────────────────── -->
+        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Padding="8,4">
+            <TextBlock Text="{Binding ErrorMessage}" Foreground="#cccccc" FontSize="12"/>
+        </Border>
+
+        <!-- ── Left navigation sidebar ──────────────────────────────── -->
+        <Border DockPanel.Dock="Left" Width="180" Background="#252526">
+            <StackPanel Margin="0,12" Spacing="2">
+
+                <!-- Repository path entry -->
+                <TextBlock Text="REPOSITORY" FontSize="11" Foreground="#888"
+                           FontWeight="Bold" Margin="12,0,12,6"/>
+                <TextBox Text="{Binding RepoPath}" Watermark="Path to repository…"
+                         Margin="8,0" FontSize="12"/>
+                <Button Content="Open" Command="{Binding OpenRepositoryCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,4,8,12"/>
+
+                <Separator Background="#3c3c3c" Margin="8,4"/>
+                <TextBlock Text="VIEWS" FontSize="11" Foreground="#888"
+                           FontWeight="Bold" Margin="12,8,12,4"/>
+
+                <Button Content="Status"   Command="{Binding ShowStatusCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
+                <Button Content="Branches" Command="{Binding ShowBranchesCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
+                <Button Content="History"  Command="{Binding ShowHistoryCommand}"
+                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
+            </StackPanel>
+        </Border>
+
+        <!-- ── Main content area — swaps view based on CurrentView ──── -->
+        <ContentControl Content="{Binding CurrentView}">
+            <ContentControl.DataTemplates>
+
+                <!-- Status view -->
+                <DataTemplate DataType="vm:StatusViewModel">
+                    <views:StatusView/>
+                </DataTemplate>
+
+                <!-- Branches view -->
+                <DataTemplate DataType="vm:BranchesViewModel">
+                    <views:BranchesView/>
+                </DataTemplate>
+
+                <!-- History view -->
+                <DataTemplate DataType="vm:HistoryViewModel">
+                    <views:HistoryView/>
+                </DataTemplate>
+
+            </ContentControl.DataTemplates>
+        </ContentControl>
+
+    </DockPanel>
+</Window>

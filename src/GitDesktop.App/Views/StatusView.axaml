@@ -1,0 +1,118 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GitDesktop.App.ViewModels"
+             x:Class="GitDesktop.App.Views.StatusView"
+             x:DataType="vm:StatusViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Branch info header -->
+        <Border Grid.Row="0" Background="#1e1e1e" Padding="12,8">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+                <TextBlock Text="Branch:" Foreground="#888" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding CurrentBranch}" FontWeight="Bold"
+                           Foreground="#4ec9b0" VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding UpstreamBranch, StringFormat='↑ {0}'}"
+                           Foreground="#888" VerticalAlignment="Center"
+                           IsVisible="{Binding UpstreamBranch, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <TextBlock Text="{Binding AheadCount, StringFormat='▲{0}'}"
+                           Foreground="#dcdcaa" VerticalAlignment="Center"
+                           IsVisible="{Binding AheadCount, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <TextBlock Text="{Binding BehindCount, StringFormat='▼{0}'}"
+                           Foreground="#f48771" VerticalAlignment="Center"
+                           IsVisible="{Binding BehindCount, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <Button Content="↻ Refresh" Command="{Binding RefreshCommand}"
+                        HorizontalAlignment="Right" Margin="16,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Three-panel file lists -->
+        <Grid Grid.Row="1" ColumnDefinitions="*,*,*">
+
+            <!-- Staged files -->
+            <DockPanel Grid.Column="0" Margin="8">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                    <TextBlock Text="Staged" FontWeight="Bold" Foreground="#4ec9b0" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding StagedFiles.Count, StringFormat='({0})'}" Foreground="#888"/>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding StagedFiles}" Background="#1e1e1e">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="−"
+                                        Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).UnstageFileCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="Unstage" Padding="6,2" Margin="4,0,0,0"/>
+                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <!-- Unstaged files -->
+            <DockPanel Grid.Column="1" Margin="8">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                    <TextBlock Text="Unstaged" FontWeight="Bold" Foreground="#dcdcaa" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding UnstagedFiles.Count, StringFormat='({0})'}" Foreground="#888"/>
+                    <Button Content="Stage all" Command="{Binding StageAllCommand}"
+                            Padding="8,2" Margin="8,0,0,0"/>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding UnstagedFiles}" Background="#1e1e1e">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="+"
+                                        Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).StageFileCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="Stage" Padding="6,2" Margin="4,0,0,0"/>
+                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+            <!-- Untracked files -->
+            <DockPanel Grid.Column="2" Margin="8">
+                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                    <TextBlock Text="Untracked" FontWeight="Bold" Foreground="#888" VerticalAlignment="Center"/>
+                    <TextBlock Text="{Binding UntrackedFiles.Count, StringFormat='({0})'}" Foreground="#888"/>
+                </StackPanel>
+                <ListBox ItemsSource="{Binding UntrackedFiles}" Background="#1e1e1e">
+                    <ListBox.ItemTemplate>
+                        <DataTemplate>
+                            <DockPanel>
+                                <Button DockPanel.Dock="Right" Content="+"
+                                        Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).StageFileCommand}"
+                                        CommandParameter="{Binding}"
+                                        ToolTip.Tip="Stage" Padding="6,2" Margin="4,0,0,0"/>
+                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                           TextTrimming="CharacterEllipsis"/>
+                            </DockPanel>
+                        </DataTemplate>
+                    </ListBox.ItemTemplate>
+                </ListBox>
+            </DockPanel>
+
+        </Grid>
+
+        <!-- Commit panel -->
+        <Border Grid.Row="2" Background="#252526" Padding="12,8">
+            <Grid RowDefinitions="Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Text="{Binding StatusMessage}" Foreground="#888"
+                           FontSize="12" Margin="0,0,0,4"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <TextBox Grid.Row="1" Text="{Binding CommitMessage}"
+                         Watermark="Commit message…" Height="60"
+                         AcceptsReturn="True" TextWrapping="Wrap"/>
+                <Button Grid.Row="2" Content="Commit staged changes"
+                        Command="{Binding CommitCommand}"
+                        HorizontalAlignment="Right" Margin="0,6,0,0"/>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>
