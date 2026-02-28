@@ -9,9 +9,13 @@ namespace GitDesktop.App.Views;
 /// </summary>
 public sealed partial class MainWindow : Window
 {
-    public MainWindow()
+    /// <summary>Creates the window with the default <see cref="MainWindowViewModel"/>.</summary>
+    public MainWindow() : this(new MainWindowViewModel()) { }
+
+    /// <summary>Creates the window with an explicitly provided <paramref name="viewModel"/>.</summary>
+    public MainWindow(MainWindowViewModel viewModel)
     {
         InitializeComponent();
-        DataContext = new MainWindowViewModel();
+        DataContext = viewModel;
     }
 }
