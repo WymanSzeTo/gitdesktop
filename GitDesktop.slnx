@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/GitDesktop.App/GitDesktop.App.csproj" />
+    <Project Path="src/GitDesktop.Cli/GitDesktop.Cli.csproj" />
+    <Project Path="src/GitDesktop.Core/GitDesktop.Core.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/GitDesktop.Core.Tests/GitDesktop.Core.Tests.csproj" />
+  </Folder>
+</Solution>
