@@ -1,0 +1,57 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GitDesktop.App.ViewModels"
+             x:Class="GitDesktop.App.Views.RemotesView"
+             x:DataType="vm:RemotesViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="#1e1e1e" Padding="12,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Remotes" FontWeight="Bold" FontSize="14"
+                           VerticalAlignment="Center"/>
+                <Button Content="↻ Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Remotes list -->
+        <ListBox Grid.Row="1" ItemsSource="{Binding Remotes}"
+                 SelectedItem="{Binding SelectedRemote}"
+                 Background="#1e1e1e" Margin="8">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <DockPanel>
+                        <Button DockPanel.Dock="Right" Content="Remove"
+                                Command="{Binding $parent[UserControl].((vm:RemotesViewModel)DataContext).RemoveRemoteCommand}"
+                                CommandParameter="{Binding}"
+                                Foreground="#f48771" Padding="6,2"/>
+                        <StackPanel Spacing="2" VerticalAlignment="Center">
+                            <TextBlock Text="{Binding Name}" FontWeight="SemiBold"
+                                       VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding FetchUrl}" Foreground="#888"
+                                       FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+                    </DockPanel>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+        <!-- Add-remote panel -->
+        <Border Grid.Row="2" Background="#252526" Padding="12,8">
+            <Grid RowDefinitions="Auto,Auto,Auto,Auto">
+                <TextBlock Grid.Row="0" Text="{Binding StatusMessage}" Foreground="#888"
+                           FontSize="12" Margin="0,0,0,4"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <TextBox Grid.Row="1" Text="{Binding NewRemoteName}"
+                         Watermark="Remote name…" Margin="0,0,0,4"/>
+                <TextBox Grid.Row="2" Text="{Binding NewRemoteUrl}"
+                         Watermark="Remote URL…" Margin="0,0,0,4"/>
+                <Button Grid.Row="3" Content="Add remote"
+                        Command="{Binding AddRemoteCommand}"
+                        HorizontalAlignment="Right"/>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>

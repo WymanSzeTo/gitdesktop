@@ -72,4 +72,18 @@ public class BranchesViewModelTests
 
         Assert.Equal(nameof(BranchesViewModel.NewBranchName), changedProperty);
     }
+
+    [Fact]
+    public void RenameBranchNewName_Set_RaisesPropertyChanged()
+    {
+        var mock = new MockGitExecutor();
+        var vm = new BranchesViewModel(new GitDesktopClient(mock), "/repo");
+
+        string? changedProperty = null;
+        vm.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
+
+        vm.RenameBranchNewName = "renamed-branch";
+
+        Assert.Equal(nameof(BranchesViewModel.RenameBranchNewName), changedProperty);
+    }
 }

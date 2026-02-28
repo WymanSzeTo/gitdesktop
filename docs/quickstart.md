@@ -58,8 +58,8 @@ dotnet publish src/GitDesktop.Cli -c Release -o ./out/cli
 dotnet run --project src/GitDesktop.App -- /path/to/repo
 ```
 
-The application prints repository status, branch list, and other details to the console while a
-full Avalonia UI is under development.
+The application opens a full Avalonia GUI with six views — Status, Branches, History, Tags,
+Remotes, and Stash — providing complete git functionality in a cross-platform desktop interface.
 
 ---
 

@@ -61,4 +61,13 @@ public class HistoryViewModelTests
 
         Assert.Contains(nameof(HistoryViewModel.SelectedCommit), changedProperties);
     }
+
+    [Fact]
+    public void StatusMessage_InitialValue_IsNull()
+    {
+        var mock = new MockGitExecutor();
+        var vm = new HistoryViewModel(new GitDesktopClient(mock), "/repo");
+
+        Assert.Null(vm.StatusMessage);
+    }
 }

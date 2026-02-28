@@ -21,6 +21,8 @@ public sealed class StatusViewModel : ViewModelBase
     private string _commitMessage = string.Empty;
     private string? _statusMessage;
 
+    private bool _amendMode;
+
     public StatusViewModel(GitDesktopClient client, string repoPath)
     {
         _client = client;
@@ -34,6 +36,7 @@ public sealed class StatusViewModel : ViewModelBase
         UnstageFileCommand = new AsyncRelayCommand<StatusEntry>(UnstageFileAsync);
         StageAllCommand = new AsyncRelayCommand(StageAllAsync);
         CommitCommand = new AsyncRelayCommand(CommitAsync, CanCommit);
+        DiscardFileCommand = new AsyncRelayCommand<StatusEntry>(DiscardFileAsync);
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
     }
 
@@ -111,6 +114,20 @@ public sealed class StatusViewModel : ViewModelBase
     /// <summary>Command to create a commit with the current staged files and commit message.</summary>
     public ICommand CommitCommand { get; }
 
+    /// <summary>Command to discard changes in a working-tree file.</summary>
+    public ICommand DiscardFileCommand { get; }
+
+    /// <summary>Gets or sets a value indicating whether the next commit should amend the last one.</summary>
+    public bool AmendMode
+    {
+        get => _amendMode;
+        set
+        {
+            SetField(ref _amendMode, value);
+            ((AsyncRelayCommand)CommitCommand).RaiseCanExecuteChanged();
+        }
+    }
+
     /// <summary>Command to refresh the status.</summary>
     public ICommand RefreshCommand { get; }
 
@@ -167,12 +184,25 @@ public sealed class StatusViewModel : ViewModelBase
 
     private async Task CommitAsync()
     {
-        if (string.IsNullOrWhiteSpace(CommitMessage)) return;
-        var result = await _client.Commit.CommitAsync(_repoPath, CommitMessage);
+        if (string.IsNullOrWhiteSpace(CommitMessage) && !AmendMode) return;
+
+        GitDesktop.Core.Execution.GitResult result;
+        if (AmendMode)
+        {
+            var msg = string.IsNullOrWhiteSpace(CommitMessage) ? null : CommitMessage;
+            result = await _client.Commit.AmendAsync(_repoPath, msg, noEdit: msg == null);
+        }
+        else
+        {
+            result = await _client.Commit.CommitAsync(_repoPath, CommitMessage);
+        }
+
         if (result.Success)
         {
+            var wasAmend = AmendMode;
             CommitMessage = string.Empty;
-            StatusMessage = "Commit created.";
+            AmendMode = false;
+            StatusMessage = wasAmend ? "Commit amended." : "Commit created.";
             await RefreshAsync();
         }
         else
@@ -181,5 +211,14 @@ public sealed class StatusViewModel : ViewModelBase
         }
     }
 
-    private bool CanCommit() => !string.IsNullOrWhiteSpace(CommitMessage) && StagedFiles.Count > 0;
+    private async Task DiscardFileAsync(StatusEntry? entry)
+    {
+        if (entry == null) return;
+        var result = await _client.Commit.DiscardAsync(_repoPath, entry.Path);
+        StatusMessage = result.Success ? $"Discarded: {entry.Path}" : result.Error;
+        await RefreshAsync();
+    }
+
+    private bool CanCommit() =>
+        (AmendMode) || (!string.IsNullOrWhiteSpace(CommitMessage) && StagedFiles.Count > 0);
 }

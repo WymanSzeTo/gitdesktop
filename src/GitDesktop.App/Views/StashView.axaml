@@ -1,0 +1,86 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GitDesktop.App.ViewModels"
+             x:Class="GitDesktop.App.Views.StashView"
+             x:DataType="vm:StashViewModel">
+
+    <Grid RowDefinitions="Auto,*,Auto">
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="#1e1e1e" Padding="12,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Stash" FontWeight="Bold" FontSize="14"
+                           VerticalAlignment="Center"/>
+                <Button Content="↻ Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Split: stash list on left, diff on right -->
+        <Grid Grid.Row="1" ColumnDefinitions="2*,3*">
+
+            <!-- Stash list -->
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding Stashes}"
+                     SelectedItem="{Binding SelectedStash}"
+                     Background="#1e1e1e">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <DockPanel>
+                            <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="4">
+                                <Button Content="Apply"
+                                        Command="{Binding $parent[UserControl].((vm:StashViewModel)DataContext).ApplyStashCommand}"
+                                        CommandParameter="{Binding}"
+                                        Padding="6,2"/>
+                                <Button Content="Pop"
+                                        Command="{Binding $parent[UserControl].((vm:StashViewModel)DataContext).PopStashCommand}"
+                                        CommandParameter="{Binding}"
+                                        Padding="6,2"/>
+                                <Button Content="Drop"
+                                        Command="{Binding $parent[UserControl].((vm:StashViewModel)DataContext).DropStashCommand}"
+                                        CommandParameter="{Binding}"
+                                        Foreground="#f48771" Padding="6,2"/>
+                            </StackPanel>
+                            <StackPanel Spacing="2" VerticalAlignment="Center">
+                                <TextBlock Text="{Binding Message}" FontWeight="SemiBold"
+                                           TextTrimming="CharacterEllipsis"
+                                           VerticalAlignment="Center"/>
+                                <StackPanel Orientation="Horizontal" Spacing="8">
+                                    <TextBlock Text="{Binding Ref}" Foreground="#569cd6"
+                                               FontFamily="Cascadia Code,Consolas,monospace"
+                                               FontSize="11"/>
+                                    <TextBlock Text="{Binding Date, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
+                                               Foreground="#888" FontSize="11"/>
+                                </StackPanel>
+                            </StackPanel>
+                        </DockPanel>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Stash diff -->
+            <ScrollViewer Grid.Column="1" Background="#1e1e1e">
+                <TextBlock Text="{Binding SelectedStashDiff}"
+                           FontFamily="Cascadia Code,Consolas,monospace"
+                           FontSize="12" TextWrapping="NoWrap"
+                           Margin="8"/>
+            </ScrollViewer>
+
+        </Grid>
+
+        <!-- Push stash panel -->
+        <Border Grid.Row="2" Background="#252526" Padding="12,8">
+            <Grid RowDefinitions="Auto,Auto">
+                <TextBlock Grid.Row="0" Text="{Binding StatusMessage}" Foreground="#888"
+                           FontSize="12" Margin="0,0,0,4"
+                           IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                <DockPanel Grid.Row="1">
+                    <Button DockPanel.Dock="Right" Content="Push stash"
+                            Command="{Binding PushStashCommand}" Margin="8,0,0,0"/>
+                    <TextBox Text="{Binding StashMessage}"
+                             Watermark="Stash message (optional)…"/>
+                </DockPanel>
+            </Grid>
+        </Border>
+
+    </Grid>
+</UserControl>
