@@ -103,11 +103,26 @@ gitdesktop/
 │   │   │   └── AdvancedService.cs
 │   │   └── GitDesktopClient.cs  (composition root for all services)
 │   ├── GitDesktop.App/
-│   │   └── Program.cs           (console + future Avalonia UI entry-point)
+│   │   ├── Program.cs           (Avalonia UI entry-point)
+│   │   ├── App.axaml / App.axaml.cs
+│   │   ├── ViewModels/
+│   │   │   ├── ViewModelBase.cs
+│   │   │   ├── MainWindowViewModel.cs
+│   │   │   ├── StatusViewModel.cs
+│   │   │   ├── BranchesViewModel.cs
+│   │   │   ├── HistoryViewModel.cs
+│   │   │   ├── AsyncRelayCommand.cs
+│   │   │   └── RelayCommand.cs
+│   │   └── Views/
+│   │       ├── MainWindow.axaml / MainWindow.axaml.cs
+│   │       ├── StatusView.axaml / StatusView.axaml.cs
+│   │       ├── BranchesView.axaml / BranchesView.axaml.cs
+│   │       └── HistoryView.axaml / HistoryView.axaml.cs
 │   └── GitDesktop.Cli/
 │       └── Program.cs           (scriptable CLI dispatcher)
 ├── tests/
-│   └── GitDesktop.Core.Tests/   (xUnit tests using MockGitExecutor)
+│   ├── GitDesktop.Core.Tests/   (xUnit tests using MockGitExecutor)
+│   └── GitDesktop.App.Tests/    (xUnit ViewModel tests)
 └── docs/
     ├── constitution.md
     ├── spec.md
@@ -184,9 +199,25 @@ in model classes beyond computed read-only properties derived from existing data
 
 ### 3.4 Presentation Layer
 
-**`GitDesktop.App`** — currently a console demonstration.  The final implementation will host an
-Avalonia UI that binds to `GitDesktopClient` via MVVM view-models.  The project has no coupling
-to `GitDesktop.Cli`.
+**`GitDesktop.App`** — the cross-platform Avalonia UI desktop application.  It follows the MVVM
+pattern:
+
+* **`App`** — Avalonia application class; applies the Fluent theme and creates `MainWindow`.
+* **`MainWindow`** — the root window.  Hosts a navigation sidebar, a top toolbar (Fetch / Pull /
+  Push), a status bar, and a `ContentControl` that swaps between the three child views.
+* **`MainWindowViewModel`** — top-level ViewModel.  Manages repository open/close,
+  navigation between views, and top-level remote operations.
+* **`StatusViewModel`** — shows staged, unstaged, and untracked files.  Exposes commands to
+  stage/unstage individual files (`StageFileCommand`, `UnstageFileCommand`), stage all
+  (`StageAllCommand`), and commit (`CommitCommand`).
+* **`BranchesViewModel`** — lists all local and remote branches.  Exposes commands to switch,
+  create, and delete local branches.
+* **`HistoryViewModel`** — displays the commit log and shows the diff for the selected commit.
+* **`AsyncRelayCommand` / `RelayCommand`** — lightweight `ICommand` wrappers (no external MVVM
+  framework dependency).
+
+The three view classes (`StatusView`, `BranchesView`, `HistoryView`) are pure Avalonia
+`UserControl` XAML with no code-behind logic; all state is held in the ViewModels.
 
 **`GitDesktop.Cli`** — a command dispatcher that maps CLI arguments to `GitDesktopClient` calls
 and formats the output for terminal consumption.
@@ -195,11 +226,46 @@ and formats the output for terminal consumption.
 
 ## 4. Data Flow
 
-### Typical Read Operation
+### GUI Read Operation (MVVM)
+
+```
+User navigates to view ──► ViewModel.RefreshAsync()
+                                    │
+                           service method ──► IGitExecutor.ExecuteAsync
+                                                    │
+                                git process spawned ◄─┘
+                                stdout/stderr captured
+                                        │
+                            GitResult returned to service
+                                        │
+                            service parses output into model
+                                        │
+                            ViewModel updates ObservableCollection
+                                        │
+                            Avalonia binding updates View automatically
+```
+
+### GUI Write Operation (MVVM Command)
+
+```
+User triggers ICommand ──► ViewModel async method
+                                    │
+                    service method builds args
+                                    │
+                    IGitExecutor.ExecuteAsync
+                                    │
+                        git process modifies repo
+                                    │
+                    GitResult returned to ViewModel
+                                    │
+                ViewModel sets StatusMessage / refreshes
+```
+
+### CLI Read Operation
 
 ```
 CLI command ──► service method ──► IGitExecutor.ExecuteAsync
-                                          │
+                                           │
                     git process spawned ◄─┘
                     stdout/stderr captured
                           │
@@ -207,24 +273,23 @@ CLI command ──► service method ──► IGitExecutor.ExecuteAsync
                           │
               service parses output into model
                           │
-              model returned to CLI / App
+              model returned to CLI
                           │
           CLI formats model as terminal output
 ```
 
-### Typical Write Operation
+### CLI Write Operation
 
 ```
 CLI command ──► service method builds argument string
                ──► IGitExecutor.ExecuteAsync
-                          │
-                  git process modifies repo
-                          │
-              GitResult(ExitCode, Output, Error) returned
-                          │
-              CLI checks result.Success, prints output/error
+                           │
+                   git process modifies repo
+                           │
+               GitResult(ExitCode, Output, Error) returned
+                           │
+               CLI checks result.Success, prints output/error
 ```
-
 ---
 
 ## 5. Threading Model
@@ -243,16 +308,17 @@ CLI command ──► service method builds argument string
 | Custom git executable | Pass the path to `new GitProcessExecutor("path/to/git")` |
 | Command interception / logging | Implement `IGitExecutor`, wrap `GitProcessExecutor`, inject the wrapper |
 | New git commands | Add a method to an existing `*Service` or create a new service and expose it on `GitDesktopClient` |
-| UI framework | Create a new project referencing `GitDesktop.Core`; build view-models on top of `GitDesktopClient` |
+| New GUI views | Add a ViewModel extending `ViewModelBase`, create an Avalonia `UserControl`, and register a `DataTemplate` in `MainWindow.axaml` |
 
 ---
 
 ## 7. Target Platforms
 
-| Platform | Status |
-|----------|--------|
-| Windows (x64, ARM64) | Supported |
-| Linux (x64, ARM64) | Supported |
-| macOS (x64, Apple Silicon) | Supported |
+| Platform | GUI (`GitDesktop.App`) | CLI (`GitDesktop.Cli`) |
+|----------|:----------------------:|:----------------------:|
+| Windows (x64, ARM64) | ✅ Supported | ✅ Supported |
+| Linux (x64, ARM64) | ✅ Supported | ✅ Supported |
+| macOS (x64, Apple Silicon) | ✅ Supported | ✅ Supported |
 
 The `.NET 10` runtime and the system `git` binary are the only runtime requirements.
+The GUI requires a display server (X11 or Wayland on Linux; native on Windows and macOS).

@@ -130,7 +130,30 @@ Open a new terminal and run:
 gitdesktop-cli --help
 ```
 
-### A8. Publish the Desktop App
+### A8. Run the Desktop GUI
+
+Start the GUI directly from the source:
+
+```bash
+dotnet run --project src/GitDesktop.App
+```
+
+Enter the path to any local git repository in the sidebar and click **Open**.
+
+### A9. Publish a Self-Contained GUI Binary
+
+**Windows (x64):**
+
+```powershell
+dotnet publish src/GitDesktop.App `
+  -c Release `
+  -r win-x64 `
+  --self-contained true `
+  -o ./publish/app-win-x64
+./publish/app-win-x64/GitDesktop.App.exe
+```
+
+**Linux (x64):**
 
 ```bash
 dotnet publish src/GitDesktop.App \
@@ -138,7 +161,22 @@ dotnet publish src/GitDesktop.App \
   -r linux-x64 \
   --self-contained true \
   -o ./publish/app-linux-x64
-./publish/app-linux-x64/GitDesktop.App /path/to/repo
+chmod +x ./publish/app-linux-x64/GitDesktop.App
+./publish/app-linux-x64/GitDesktop.App
+```
+
+> **Note (Linux):** The GUI requires a display server.  Set the `DISPLAY` environment variable
+> if running in a remote or headless environment.
+
+**macOS (Apple Silicon):**
+
+```bash
+dotnet publish src/GitDesktop.App \
+  -c Release \
+  -r osx-arm64 \
+  --self-contained true \
+  -o ./publish/app-osx-arm64
+./publish/app-osx-arm64/GitDesktop.App
 ```
 
 ---

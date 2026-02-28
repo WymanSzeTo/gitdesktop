@@ -5,6 +5,7 @@
     <Project Path="src/GitDesktop.Core/GitDesktop.Core.csproj" />
   </Folder>
   <Folder Name="/tests/">
+    <Project Path="tests/GitDesktop.App.Tests/GitDesktop.App.Tests.csproj" />
     <Project Path="tests/GitDesktop.Core.Tests/GitDesktop.Core.Tests.csproj" />
   </Folder>
 </Solution>
