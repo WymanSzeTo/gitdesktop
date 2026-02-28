@@ -231,9 +231,9 @@ pattern:
 * **`AsyncRelayCommand` / `RelayCommand`** — lightweight `ICommand` wrappers (no external MVVM
   framework dependency).
 
-The three view classes (`StatusView`, `BranchesView`, `HistoryView`) and the additional view
-classes (`TagsView`, `RemotesView`, `StashView`) are pure Avalonia `UserControl` XAML with no
-code-behind logic; all state is held in the ViewModels.
+The six view classes (`StatusView`, `BranchesView`, `HistoryView`, `TagsView`, `RemotesView`,
+`StashView`) are pure Avalonia `UserControl` XAML with no code-behind logic; all state is held
+in the ViewModels.
 
 **`GitDesktop.Cli`** — a command dispatcher that maps CLI arguments to `GitDesktopClient` calls
 and formats the output for terminal consumption.

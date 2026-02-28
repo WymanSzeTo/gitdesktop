@@ -199,9 +199,10 @@ public sealed class StatusViewModel : ViewModelBase
 
         if (result.Success)
         {
+            var wasAmend = AmendMode;
             CommitMessage = string.Empty;
             AmendMode = false;
-            StatusMessage = AmendMode ? "Commit amended." : "Commit created.";
+            StatusMessage = wasAmend ? "Commit amended." : "Commit created.";
             await RefreshAsync();
         }
         else
