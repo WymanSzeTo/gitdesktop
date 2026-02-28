@@ -111,13 +111,19 @@ gitdesktop/
 │   │   │   ├── StatusViewModel.cs
 │   │   │   ├── BranchesViewModel.cs
 │   │   │   ├── HistoryViewModel.cs
+│   │   │   ├── TagsViewModel.cs
+│   │   │   ├── RemotesViewModel.cs
+│   │   │   ├── StashViewModel.cs
 │   │   │   ├── AsyncRelayCommand.cs
 │   │   │   └── RelayCommand.cs
 │   │   └── Views/
 │   │       ├── MainWindow.axaml / MainWindow.axaml.cs
 │   │       ├── StatusView.axaml / StatusView.axaml.cs
 │   │       ├── BranchesView.axaml / BranchesView.axaml.cs
-│   │       └── HistoryView.axaml / HistoryView.axaml.cs
+│   │       ├── HistoryView.axaml / HistoryView.axaml.cs
+│   │       ├── TagsView.axaml / TagsView.axaml.cs
+│   │       ├── RemotesView.axaml / RemotesView.axaml.cs
+│   │       └── StashView.axaml / StashView.axaml.cs
 │   └── GitDesktop.Cli/
 │       └── Program.cs           (scriptable CLI dispatcher)
 ├── tests/
@@ -204,20 +210,30 @@ pattern:
 
 * **`App`** — Avalonia application class; applies the Fluent theme and creates `MainWindow`.
 * **`MainWindow`** — the root window.  Hosts a navigation sidebar, a top toolbar (Fetch / Pull /
-  Push), a status bar, and a `ContentControl` that swaps between the three child views.
+  Push), a status bar, and a `ContentControl` that swaps between the child views.
 * **`MainWindowViewModel`** — top-level ViewModel.  Manages repository open/close,
-  navigation between views, and top-level remote operations.
+  navigation between views (Status, Branches, History, Tags, Remotes, Stash), and
+  top-level remote operations.
 * **`StatusViewModel`** — shows staged, unstaged, and untracked files.  Exposes commands to
   stage/unstage individual files (`StageFileCommand`, `UnstageFileCommand`), stage all
-  (`StageAllCommand`), and commit (`CommitCommand`).
+  (`StageAllCommand`), commit (`CommitCommand`), amend (`AmendMode`), and discard changes
+  (`DiscardFileCommand`).
 * **`BranchesViewModel`** — lists all local and remote branches.  Exposes commands to switch,
-  create, and delete local branches.
+  create, delete, rename (`RenameBranchCommand`), and merge (`MergeBranchCommand`) branches.
 * **`HistoryViewModel`** — displays the commit log and shows the diff for the selected commit.
+  Exposes commands to cherry-pick (`CherryPickCommand`), revert (`RevertCommand`), and
+  reset to a commit (`ResetToCommitCommand`).
+* **`TagsViewModel`** — lists tags.  Exposes commands to create lightweight and annotated tags,
+  and delete tags.
+* **`RemotesViewModel`** — lists configured remotes.  Exposes commands to add and remove remotes.
+* **`StashViewModel`** — lists stashes with diff preview.  Exposes commands to push, apply,
+  pop, and drop stashes.
 * **`AsyncRelayCommand` / `RelayCommand`** — lightweight `ICommand` wrappers (no external MVVM
   framework dependency).
 
-The three view classes (`StatusView`, `BranchesView`, `HistoryView`) are pure Avalonia
-`UserControl` XAML with no code-behind logic; all state is held in the ViewModels.
+The three view classes (`StatusView`, `BranchesView`, `HistoryView`) and the additional view
+classes (`TagsView`, `RemotesView`, `StashView`) are pure Avalonia `UserControl` XAML with no
+code-behind logic; all state is held in the ViewModels.
 
 **`GitDesktop.Cli`** — a command dispatcher that maps CLI arguments to `GitDesktopClient` calls
 and formats the output for terminal consumption.

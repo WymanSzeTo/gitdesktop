@@ -39,7 +39,7 @@ gitdesktop/
 │   │   ├── Models/              Immutable domain models
 │   │   └── Services/            One service class per git domain area
 │   ├── GitDesktop.App/          Avalonia UI desktop application
-│   │   ├── ViewModels/          MVVM ViewModels (MainWindow, Status, Branches, History)
+│   │   ├── ViewModels/          MVVM ViewModels (MainWindow, Status, Branches, History, Tags, Remotes, Stash)
 │   │   └── Views/               Avalonia XAML views
 │   └── GitDesktop.Cli/          CLI dispatcher
 ├── tests/

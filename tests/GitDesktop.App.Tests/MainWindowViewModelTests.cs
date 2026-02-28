@@ -76,6 +76,9 @@ public class MainWindowViewModelTests
         Assert.NotNull(vm.StatusVM);
         Assert.NotNull(vm.BranchesVM);
         Assert.NotNull(vm.HistoryVM);
+        Assert.NotNull(vm.TagsVM);
+        Assert.NotNull(vm.RemotesVM);
+        Assert.NotNull(vm.StashVM);
         Assert.IsType<StatusViewModel>(vm.CurrentView);
     }
 }

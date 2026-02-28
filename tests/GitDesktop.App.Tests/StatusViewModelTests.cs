@@ -58,6 +58,31 @@ public class StatusViewModelTests
     }
 
     [Fact]
+    public void CommitCommand_CanExecute_WhenAmendMode()
+    {
+        var mock = new MockGitExecutor();
+        var vm = new StatusViewModel(new GitDesktopClient(mock), "/repo");
+
+        vm.AmendMode = true;
+
+        Assert.True(vm.CommitCommand.CanExecute(null));
+    }
+
+    [Fact]
+    public void AmendMode_Set_RaisesPropertyChanged()
+    {
+        var mock = new MockGitExecutor();
+        var vm = new StatusViewModel(new GitDesktopClient(mock), "/repo");
+
+        string? changedProperty = null;
+        vm.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
+
+        vm.AmendMode = true;
+
+        Assert.Equal(nameof(StatusViewModel.AmendMode), changedProperty);
+    }
+
+    [Fact]
     public void CommitMessage_Set_RaisesPropertyChanged()
     {
         var mock = new MockGitExecutor();

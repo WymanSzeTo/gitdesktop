@@ -24,7 +24,18 @@ Use .Net 10 (major in C#) to develop Git Desktop Client covering all the functio
 dotnet run --project src/GitDesktop.App
 ```
 
-The GUI opens a main window. Enter the path to any local git repository in the sidebar and click **Open** to load it. Use the **Status**, **Branches**, and **History** views to inspect and interact with the repository.
+The GUI opens a main window. Enter the path to any local git repository in the sidebar and click **Open** to load it. Use the **Status**, **Branches**, **History**, **Tags**, **Remotes**, and **Stash** views to inspect and interact with the repository.
+
+#### GUI Views
+
+| View | Features |
+|------|----------|
+| **Status** | Staged/unstaged/untracked files, stage/unstage, commit, amend, discard changes |
+| **Branches** | List local and remote branches, create, switch, delete, rename, merge |
+| **History** | Commit log with diff preview, cherry-pick, revert, reset |
+| **Tags** | List tags, create lightweight and annotated tags, delete tags |
+| **Remotes** | List remotes, add, remove remotes |
+| **Stash** | List stashes with diff preview, push, apply, pop, drop stashes |
 
 ### Run the CLI
 
