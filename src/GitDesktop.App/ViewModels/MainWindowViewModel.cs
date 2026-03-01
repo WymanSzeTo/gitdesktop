@@ -1,40 +1,50 @@
+using System.Collections.ObjectModel;
 using System.Windows.Input;
+using GitDesktop.App.Models;
+using GitDesktop.App.Services;
 using GitDesktop.Core;
 
 namespace GitDesktop.App.ViewModels;
 
 /// <summary>
-/// ViewModel for the main application window. Manages the repository path,
-/// navigation between views, and top-level git operations (fetch, pull, push).
+/// ViewModel for the main application window. Manages the collection of open
+/// repository tabs, global settings (theme, font size), and exposes
+/// pass-through properties for backward compatibility.
 /// </summary>
 public sealed class MainWindowViewModel : ViewModelBase
 {
     private readonly GitDesktopClient _client;
+    private readonly AppConfigService _configService;
+    private AppConfig _config = new();
+
     private string _repoPath = string.Empty;
-    private ViewModelBase? _currentView;
     private string _title = "GitDesktop";
-    private string? _errorMessage;
-    private bool _isRepoOpen;
+    private string? _globalErrorMessage;
+    private RepositoryTabViewModel? _selectedTab;
 
-    public MainWindowViewModel() : this(new GitDesktopClient()) { }
+    // ── Theme / font ─────────────────────────────────────────────────────────
+    private string _selectedTheme = "Dark";
+    private double _fontSize = 13.0;
 
-    public MainWindowViewModel(GitDesktopClient client)
+    public MainWindowViewModel() : this(new GitDesktopClient(), new AppConfigService()) { }
+
+    public MainWindowViewModel(GitDesktopClient client, AppConfigService? configService = null)
     {
-        _client = client;
+        _client        = client;
+        _configService = configService ?? new AppConfigService();
+
+        Tabs = [];
 
         OpenRepositoryCommand = new AsyncRelayCommand(OpenRepositoryAsync, () => !string.IsNullOrWhiteSpace(RepoPath));
-        FetchCommand = new AsyncRelayCommand(FetchAsync, () => _isRepoOpen);
-        PullCommand = new AsyncRelayCommand(PullAsync, () => _isRepoOpen);
-        PushCommand = new AsyncRelayCommand(PushAsync, () => _isRepoOpen);
-        ShowStatusCommand = new RelayCommand(ShowStatus, () => _isRepoOpen);
-        ShowBranchesCommand = new RelayCommand(ShowBranches, () => _isRepoOpen);
-        ShowHistoryCommand = new RelayCommand(ShowHistory, () => _isRepoOpen);
-        ShowTagsCommand = new RelayCommand(ShowTags, () => _isRepoOpen);
-        ShowRemotesCommand = new RelayCommand(ShowRemotes, () => _isRepoOpen);
-        ShowStashCommand = new RelayCommand(ShowStash, () => _isRepoOpen);
+        AddRepositoryCommand  = new AsyncRelayCommand<string>(AddRepositoryByPathAsync);
+        CloseTabCommand       = new RelayCommand<RepositoryTabViewModel>(CloseTab);
+        SaveSettingsCommand   = new AsyncRelayCommand(SaveSettingsAsync);
+        LoadConfigCommand     = new AsyncRelayCommand(LoadConfigAsync);
     }
 
-    /// <summary>Gets or sets the path to the repository to open.</summary>
+    // ── Properties ────────────────────────────────────────────────────────────
+
+    /// <summary>Gets or sets the path used to open a new repository tab.</summary>
     public string RepoPath
     {
         get => _repoPath;
@@ -52,168 +62,202 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetField(ref _title, value);
     }
 
-    /// <summary>Gets or sets the error/status message shown in the status bar.</summary>
+    /// <summary>Gets the collection of open repository tabs.</summary>
+    public ObservableCollection<RepositoryTabViewModel> Tabs { get; }
+
+    /// <summary>Gets or sets the currently selected repository tab.</summary>
+    public RepositoryTabViewModel? SelectedTab
+    {
+        get => _selectedTab;
+        set
+        {
+            if (SetField(ref _selectedTab, value))
+            {
+                Title = value != null ? $"GitDesktop — {value.RepoPath}" : "GitDesktop";
+                OnPropertyChanged(nameof(ErrorMessage));
+                OnPropertyChanged(nameof(CurrentView));
+                OnPropertyChanged(nameof(StatusVM));
+                OnPropertyChanged(nameof(BranchesVM));
+                OnPropertyChanged(nameof(HistoryVM));
+                OnPropertyChanged(nameof(TagsVM));
+                OnPropertyChanged(nameof(RemotesVM));
+                OnPropertyChanged(nameof(StashVM));
+                OnPropertyChanged(nameof(FilesVM));
+                OnPropertyChanged(nameof(FetchCommand));
+                OnPropertyChanged(nameof(PullCommand));
+                OnPropertyChanged(nameof(PushCommand));
+            }
+        }
+    }
+
+    /// <summary>Gets the list of known repositories from the config (for the sidebar).</summary>
+    public IReadOnlyList<RepositoryEntry> KnownRepositories => _config.Repositories;
+
+    // ── Pass-through properties (delegates to SelectedTab) ───────────────────
+
+    /// <summary>Gets the error/status message for the active tab (or a global error).</summary>
     public string? ErrorMessage
     {
-        get => _errorMessage;
-        private set => SetField(ref _errorMessage, value);
+        get => _selectedTab?.ErrorMessage ?? _globalErrorMessage;
+        private set
+        {
+            _globalErrorMessage = value;
+            OnPropertyChanged();
+        }
     }
 
-    /// <summary>Gets the currently displayed child view model.</summary>
-    public ViewModelBase? CurrentView
+    /// <summary>Gets the currently displayed child view model in the active tab.</summary>
+    public ViewModelBase? CurrentView => _selectedTab?.CurrentView;
+
+    public StatusViewModel?   StatusVM   => _selectedTab?.StatusVM;
+    public BranchesViewModel? BranchesVM => _selectedTab?.BranchesVM;
+    public HistoryViewModel?  HistoryVM  => _selectedTab?.HistoryVM;
+    public TagsViewModel?     TagsVM     => _selectedTab?.TagsVM;
+    public RemotesViewModel?  RemotesVM  => _selectedTab?.RemotesVM;
+    public StashViewModel?    StashVM    => _selectedTab?.StashVM;
+    public FilesViewModel?    FilesVM    => _selectedTab?.FilesVM;
+
+    // ── Pass-through commands (delegates to SelectedTab) ─────────────────────
+
+    public ICommand? FetchCommand        => _selectedTab?.FetchCommand;
+    public ICommand? PullCommand         => _selectedTab?.PullCommand;
+    public ICommand? PushCommand         => _selectedTab?.PushCommand;
+    public ICommand? ShowStatusCommand   => _selectedTab?.ShowStatusCommand;
+    public ICommand? ShowBranchesCommand => _selectedTab?.ShowBranchesCommand;
+    public ICommand? ShowHistoryCommand  => _selectedTab?.ShowHistoryCommand;
+    public ICommand? ShowTagsCommand     => _selectedTab?.ShowTagsCommand;
+    public ICommand? ShowRemotesCommand  => _selectedTab?.ShowRemotesCommand;
+    public ICommand? ShowStashCommand    => _selectedTab?.ShowStashCommand;
+    public ICommand? ShowFilesCommand    => _selectedTab?.ShowFilesCommand;
+
+    // ── Theme & font size ─────────────────────────────────────────────────────
+
+    /// <summary>Gets the ordered list of available theme names.</summary>
+    public IReadOnlyList<string> AvailableThemes => ThemeManager.ThemeNames;
+
+    /// <summary>Gets or sets the name of the active colour theme.</summary>
+    public string SelectedTheme
     {
-        get => _currentView;
-        private set => SetField(ref _currentView, value);
+        get => _selectedTheme;
+        set
+        {
+            if (SetField(ref _selectedTheme, value))
+            {
+                ThemeManager.ApplyTheme(value);
+                _config.Theme = value;
+            }
+        }
     }
 
-    /// <summary>Gets the <see cref="StatusViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
-    public StatusViewModel? StatusVM { get; private set; }
+    /// <summary>Gets or sets the global UI font size.</summary>
+    public double FontSize
+    {
+        get => _fontSize;
+        set
+        {
+            if (SetField(ref _fontSize, value))
+            {
+                ApplyFontSize(value);
+                _config.FontSize = value;
+            }
+        }
+    }
 
-    /// <summary>Gets the <see cref="BranchesViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
-    public BranchesViewModel? BranchesVM { get; private set; }
+    // ── Commands ──────────────────────────────────────────────────────────────
 
-    /// <summary>Gets the <see cref="HistoryViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
-    public HistoryViewModel? HistoryVM { get; private set; }
-
-    /// <summary>Gets the <see cref="TagsViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
-    public TagsViewModel? TagsVM { get; private set; }
-
-    /// <summary>Gets the <see cref="RemotesViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
-    public RemotesViewModel? RemotesVM { get; private set; }
-
-    /// <summary>Gets the <see cref="StashViewModel"/>, or <see langword="null"/> if no repo is open.</summary>
-    public StashViewModel? StashVM { get; private set; }
-
-    /// <summary>Command to open a repository from <see cref="RepoPath"/>.</summary>
+    /// <summary>Opens a new repository tab for <see cref="RepoPath"/>.</summary>
     public ICommand OpenRepositoryCommand { get; }
 
-    /// <summary>Command to fetch from all remotes.</summary>
-    public ICommand FetchCommand { get; }
+    /// <summary>Opens a repository tab by path (used from the saved-repos list).</summary>
+    public ICommand AddRepositoryCommand { get; }
 
-    /// <summary>Command to pull from upstream.</summary>
-    public ICommand PullCommand { get; }
+    /// <summary>Closes a repository tab.</summary>
+    public ICommand CloseTabCommand { get; }
 
-    /// <summary>Command to push to remote.</summary>
-    public ICommand PushCommand { get; }
+    /// <summary>Persists current settings (theme, font size) to disk.</summary>
+    public ICommand SaveSettingsCommand { get; }
 
-    /// <summary>Command to navigate to the Status view.</summary>
-    public ICommand ShowStatusCommand { get; }
+    /// <summary>Reloads the config from disk.</summary>
+    public ICommand LoadConfigCommand { get; }
 
-    /// <summary>Command to navigate to the Branches view.</summary>
-    public ICommand ShowBranchesCommand { get; }
+    // ── Implementation ────────────────────────────────────────────────────────
 
-    /// <summary>Command to navigate to the History view.</summary>
-    public ICommand ShowHistoryCommand { get; }
-
-    /// <summary>Command to navigate to the Tags view.</summary>
-    public ICommand ShowTagsCommand { get; }
-
-    /// <summary>Command to navigate to the Remotes view.</summary>
-    public ICommand ShowRemotesCommand { get; }
-
-    /// <summary>Command to navigate to the Stash view.</summary>
-    public ICommand ShowStashCommand { get; }
-
-    /// <summary>Opens a repository at <see cref="RepoPath"/> and loads initial data.</summary>
+    /// <summary>Opens a repository at <see cref="RepoPath"/> and creates a new tab.</summary>
     public async Task OpenRepositoryAsync()
     {
-        ErrorMessage = null;
-        var repo = await _client.Repository.OpenAsync(RepoPath);
+        await AddRepositoryByPathAsync(RepoPath);
+    }
+
+    private async Task AddRepositoryByPathAsync(string? path)
+    {
+        if (string.IsNullOrWhiteSpace(path)) return;
+
+        var repo = await _client.Repository.OpenAsync(path);
         if (repo == null)
         {
-            ErrorMessage = $"Not a git repository: {RepoPath}";
+            ErrorMessage = $"Not a git repository: {path}";
             return;
         }
 
-        _isRepoOpen = true;
-        Title = $"GitDesktop — {repo.Path}";
+        var name = System.IO.Path.GetFileName(path.TrimEnd(System.IO.Path.DirectorySeparatorChar));
+        var tab  = new RepositoryTabViewModel(_client, path, name);
+        Tabs.Add(tab);
+        SelectedTab = tab;
 
-        StatusVM = new StatusViewModel(_client, RepoPath);
-        BranchesVM = new BranchesViewModel(_client, RepoPath);
-        HistoryVM = new HistoryViewModel(_client, RepoPath);
-        TagsVM = new TagsViewModel(_client, RepoPath);
-        RemotesVM = new RemotesViewModel(_client, RepoPath);
-        StashVM = new StashViewModel(_client, RepoPath);
+        // Persist to config.
+        await _configService.AddRepositoryAsync(_config, path, name);
+        OnPropertyChanged(nameof(KnownRepositories));
 
-        OnPropertyChanged(nameof(StatusVM));
-        OnPropertyChanged(nameof(BranchesVM));
-        OnPropertyChanged(nameof(HistoryVM));
-        OnPropertyChanged(nameof(TagsVM));
-        OnPropertyChanged(nameof(RemotesVM));
-        OnPropertyChanged(nameof(StashVM));
-
-        ((AsyncRelayCommand)FetchCommand).RaiseCanExecuteChanged();
-        ((AsyncRelayCommand)PullCommand).RaiseCanExecuteChanged();
-        ((AsyncRelayCommand)PushCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ShowStatusCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ShowBranchesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ShowHistoryCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ShowTagsCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ShowRemotesCommand).RaiseCanExecuteChanged();
-        ((RelayCommand)ShowStashCommand).RaiseCanExecuteChanged();
-
-        // Start on status view and load data in parallel
-        ShowStatus();
-        await Task.WhenAll(
-            StatusVM.RefreshAsync(),
-            BranchesVM.RefreshAsync(),
-            HistoryVM.RefreshAsync());
+        // Load data for the new tab.
+        await tab.LoadAsync();
     }
 
-    private void ShowStatus()
+    private void CloseTab(RepositoryTabViewModel? tab)
     {
-        if (StatusVM != null) CurrentView = StatusVM;
+        if (tab == null) return;
+        var idx = Tabs.IndexOf(tab);
+        Tabs.Remove(tab);
+
+        if (Tabs.Count == 0)
+        {
+            SelectedTab = null;
+        }
+        else
+        {
+            var newIdx = Math.Max(0, Math.Min(idx, Tabs.Count - 1));
+            SelectedTab = Tabs[newIdx];
+        }
     }
 
-    private void ShowBranches()
+    private async Task SaveSettingsAsync()
     {
-        if (BranchesVM != null) CurrentView = BranchesVM;
+        _config.Theme    = _selectedTheme;
+        _config.FontSize = _fontSize;
+        await _configService.SaveAsync(_config);
     }
 
-    private void ShowHistory()
+    /// <summary>Loads the configuration from disk. Exposed for testing.</summary>
+    public async Task LoadConfigAsync()
     {
-        if (HistoryVM != null) CurrentView = HistoryVM;
+        _config = await _configService.LoadAsync();
+        OnPropertyChanged(nameof(KnownRepositories));
+
+        _selectedTheme = _config.Theme;
+        _fontSize      = _config.FontSize > 0 ? _config.FontSize : 13.0;
+        OnPropertyChanged(nameof(SelectedTheme));
+        OnPropertyChanged(nameof(FontSize));
+
+        ThemeManager.ApplyTheme(_selectedTheme);
+        ApplyFontSize(_fontSize);
     }
 
-    private void ShowTags()
+    private static void ApplyFontSize(double size)
     {
-        if (TagsVM != null) CurrentView = TagsVM;
-    }
-
-    private void ShowRemotes()
-    {
-        if (RemotesVM != null) CurrentView = RemotesVM;
-    }
-
-    private void ShowStash()
-    {
-        if (StashVM != null) CurrentView = StashVM;
-    }
-
-    private async Task FetchAsync()
-    {
-        ErrorMessage = null;
-        var result = await _client.Remote.FetchAsync(RepoPath, prune: true);
-        ErrorMessage = result.Success ? "Fetch complete." : result.Error;
-        if (result.Success && StatusVM != null)
-            await StatusVM.RefreshAsync();
-    }
-
-    private async Task PullAsync()
-    {
-        ErrorMessage = null;
-        var result = await _client.Remote.PullAsync(RepoPath);
-        ErrorMessage = result.Success ? "Pull complete." : result.Error;
-        if (result.Success && StatusVM != null)
-            await Task.WhenAll(StatusVM.RefreshAsync(), HistoryVM?.RefreshAsync() ?? Task.CompletedTask);
-    }
-
-    private async Task PushAsync()
-    {
-        ErrorMessage = null;
-        var result = await _client.Remote.PushAsync(RepoPath);
-        ErrorMessage = result.Success ? "Push complete." : result.Error;
-        if (result.Success && StatusVM != null)
-            await StatusVM.RefreshAsync();
+        var app = Avalonia.Application.Current;
+        if (app == null) return;
+        app.Resources["AppFontSize"]        = size;
+        app.Resources["AppFontSizeLarge"]   = size + 2;
+        app.Resources["AppFontSizeSmall"]   = Math.Max(9, size - 2);
+        app.Resources["AppFontSizeHeading"] = size + 4;
     }
 }

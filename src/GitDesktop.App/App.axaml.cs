@@ -1,6 +1,7 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
+using GitDesktop.App.Services;
 using GitDesktop.App.Views;
 
 namespace GitDesktop.App;
@@ -19,9 +20,25 @@ public sealed class App : Application
     {
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Apply theme from persisted config before showing the window.
+            _ = ApplyStoredThemeAsync();
             desktop.MainWindow = new MainWindow();
         }
 
         base.OnFrameworkInitializationCompleted();
+    }
+
+    private static async Task ApplyStoredThemeAsync()
+    {
+        try
+        {
+            var svc    = new AppConfigService();
+            var config = await svc.LoadAsync();
+            ThemeManager.ApplyTheme(config.Theme);
+        }
+        catch
+        {
+            // If loading fails, the defaults defined in App.axaml remain in effect.
+        }
     }
 }

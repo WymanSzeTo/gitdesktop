@@ -7,7 +7,8 @@ namespace GitDesktop.App.ViewModels;
 
 /// <summary>
 /// ViewModel for the repository status view. Shows staged, unstaged, and
-/// untracked files, and supports staging/unstaging individual files.
+/// untracked files, supports staging/unstaging individual files, and shows
+/// a syntax-highlighted diff for the selected file.
 /// </summary>
 public sealed class StatusViewModel : ViewModelBase
 {
@@ -20,25 +21,50 @@ public sealed class StatusViewModel : ViewModelBase
     private bool _isLoading;
     private string _commitMessage = string.Empty;
     private string? _statusMessage;
-
     private bool _amendMode;
+    private StatusEntry? _selectedFile;
+    private bool _isDiffLoading;
 
     public StatusViewModel(GitDesktopClient client, string repoPath)
     {
         _client = client;
         _repoPath = repoPath;
 
-        StagedFiles = [];
+        StagedFiles   = [];
         UnstagedFiles = [];
         UntrackedFiles = [];
+        DiffLines      = [];
 
-        StageFileCommand = new AsyncRelayCommand<StatusEntry>(StageFileAsync);
+        StageFileCommand   = new AsyncRelayCommand<StatusEntry>(StageFileAsync);
         UnstageFileCommand = new AsyncRelayCommand<StatusEntry>(UnstageFileAsync);
-        StageAllCommand = new AsyncRelayCommand(StageAllAsync);
-        CommitCommand = new AsyncRelayCommand(CommitAsync, CanCommit);
+        StageAllCommand    = new AsyncRelayCommand(StageAllAsync);
+        CommitCommand      = new AsyncRelayCommand(CommitAsync, CanCommit);
         DiscardFileCommand = new AsyncRelayCommand<StatusEntry>(DiscardFileAsync);
-        RefreshCommand = new AsyncRelayCommand(RefreshAsync);
+        RefreshCommand     = new AsyncRelayCommand(RefreshAsync);
     }
+
+    // ── Diff panel ────────────────────────────────────────────────────────────
+
+    /// <summary>Gets or sets the file whose diff is currently displayed.</summary>
+    public StatusEntry? SelectedFile
+    {
+        get => _selectedFile;
+        set
+        {
+            if (SetField(ref _selectedFile, value))
+                _ = LoadDiffAsync(value);
+        }
+    }
+
+    /// <summary>Gets a value indicating whether the diff panel is loading.</summary>
+    public bool IsDiffLoading
+    {
+        get => _isDiffLoading;
+        private set => SetField(ref _isDiffLoading, value);
+    }
+
+    /// <summary>Gets the diff lines for the selected file.</summary>
+    public ObservableCollection<DiffLineViewModel> DiffLines { get; }
 
     /// <summary>Gets the currently checked-out branch name.</summary>
     public string CurrentBranch
@@ -221,4 +247,52 @@ public sealed class StatusViewModel : ViewModelBase
 
     private bool CanCommit() =>
         (AmendMode) || (!string.IsNullOrWhiteSpace(CommitMessage) && StagedFiles.Count > 0);
+
+    // ── Diff loading ──────────────────────────────────────────────────────────
+
+    private async Task LoadDiffAsync(StatusEntry? entry)
+    {
+        DiffLines.Clear();
+        if (entry == null) return;
+
+        IsDiffLoading = true;
+        try
+        {
+            // For staged files use --cached; for working-tree files don't.
+            bool isCached = entry.IndexStatus != FileStatusKind.Untracked
+                         && entry.IndexStatus != FileStatusKind.Modified;
+
+            var result = await _client.History.DiffAsync(_repoPath, entry.Path, cached: isCached);
+            if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+                return;
+
+            foreach (var vm in ParseDiffLines(result.Output))
+                DiffLines.Add(vm);
+        }
+        finally
+        {
+            IsDiffLoading = false;
+        }
+    }
+
+    /// <summary>Converts raw unified-diff text into a list of <see cref="DiffLineViewModel"/>.</summary>
+    public static IEnumerable<DiffLineViewModel> ParseDiffLines(string diffText)
+    {
+        foreach (var rawLine in diffText.Split('\n'))
+        {
+            var lineType = rawLine.Length == 0
+                ? DiffLineType.Context
+                : rawLine[0] switch
+                {
+                    '+' when rawLine.StartsWith("+++") => DiffLineType.Header,
+                    '-' when rawLine.StartsWith("---") => DiffLineType.Header,
+                    '+' => DiffLineType.Added,
+                    '-' => DiffLineType.Removed,
+                    '@' => DiffLineType.Hunk,
+                    'd' when rawLine.StartsWith("diff ") => DiffLineType.Header,
+                    _ => DiffLineType.Context,
+                };
+            yield return new DiffLineViewModel(new DiffLine { Content = rawLine, Type = lineType });
+        }
+    }
 }

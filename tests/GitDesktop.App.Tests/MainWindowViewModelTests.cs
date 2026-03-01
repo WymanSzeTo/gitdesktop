@@ -1,3 +1,4 @@
+using GitDesktop.App.Services;
 using GitDesktop.App.ViewModels;
 using GitDesktop.Core;
 using GitDesktop.Core.Execution;
@@ -7,13 +8,30 @@ namespace GitDesktop.App.Tests;
 /// <summary>
 /// Unit tests for <see cref="MainWindowViewModel"/>.
 /// </summary>
-public class MainWindowViewModelTests
+public class MainWindowViewModelTests : IDisposable
 {
+    private readonly string _tempDir;
+
+    public MainWindowViewModelTests()
+    {
+        _tempDir = Path.Combine(Path.GetTempPath(), $"GitDesktop_MainWin_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(_tempDir);
+    }
+
+    public void Dispose()
+    {
+        if (Directory.Exists(_tempDir))
+            Directory.Delete(_tempDir, recursive: true);
+    }
+
+    private AppConfigService IsolatedConfig() =>
+        new(Path.Combine(_tempDir, $"cfg_{Guid.NewGuid():N}.json"));
+
     [Fact]
     public void Constructor_InitialState_TitleIsGitDesktop()
     {
         var mock = new MockGitExecutor();
-        var vm = new MainWindowViewModel(new GitDesktopClient(mock));
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
 
         Assert.Equal("GitDesktop", vm.Title);
         Assert.Null(vm.CurrentView);
@@ -27,7 +45,7 @@ public class MainWindowViewModelTests
     public void RepoPath_Set_RaisesPropertyChanged()
     {
         var mock = new MockGitExecutor();
-        var vm = new MainWindowViewModel(new GitDesktopClient(mock));
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
 
         string? changedProperty = null;
         vm.PropertyChanged += (_, e) => changedProperty = e.PropertyName;
@@ -44,7 +62,7 @@ public class MainWindowViewModelTests
         // OpenAsync sends two git commands; make the first fail
         mock.EnqueueFailure("not a git repository", 128);
 
-        var vm = new MainWindowViewModel(new GitDesktopClient(mock));
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
         vm.RepoPath = "/tmp/notarepo";
 
         await vm.OpenRepositoryAsync();
@@ -67,7 +85,7 @@ public class MainWindowViewModelTests
         // History log response
         mock.EnqueueSuccess("");
 
-        var vm = new MainWindowViewModel(new GitDesktopClient(mock));
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
         vm.RepoPath = "/repo";
 
         await vm.OpenRepositoryAsync();
