@@ -110,7 +110,7 @@ public class DiffHighlightingTests
     public async Task SelectedFile_Set_LoadsDiffLines()
     {
         var mock = new MockGitExecutor();
-        // RefreshAsync (not called here) + DiffAsync response
+        // DiffAsync response (cached=false because AddedForeground is still "Added" from IndexStatus)
         mock.EnqueueSuccess("+added line\n-removed line\n context line\n");
 
         var vm    = new StatusViewModel(new GitDesktopClient(mock), "/repo");
@@ -121,10 +121,8 @@ public class DiffHighlightingTests
             WorkTreeStatus = FileStatusKind.Modified,
         };
 
-        vm.SelectedFile = entry;
-
-        // Allow the async LoadDiff task to complete.
-        await Task.Delay(100);
+        // Call LoadDiffAsync directly so the test can await completion reliably.
+        await vm.LoadDiffAsync(entry);
 
         Assert.NotEmpty(vm.DiffLines);
         Assert.Equal(DiffLineType.Added,   vm.DiffLines[0].Type);

@@ -10,6 +10,17 @@ GitDesktop is a **.NET 10** (C#) cross-platform Git client.  It consists of thre
 | `GitDesktop.App`  | Executable | Graphical desktop UI entry-point (Avalonia UI) |
 | `GitDesktop.Cli`  | Executable | Scriptable command-line interface |
 
+### 1.1 GUI Feature Summary
+
+| Feature | Description |
+|---------|-------------|
+| **Multi-repository tabs** | Multiple repositories can be opened simultaneously, each in its own tab |
+| **Saved repositories** | Known repository paths and names are persisted in JSON config and shown in the sidebar |
+| **Status & diff view** | Staged/unstaged/untracked files; selecting a file loads a syntax-highlighted diff |
+| **File browser** | Filterable list of all tracked files via `git ls-files` |
+| **5 colour themes** | Dark (default), Light, Monokai, Solarized Dark, Nord — switchable live |
+| **Adjustable font size** | Slider in the toolbar; persisted in config |
+
 ---
 
 ## 2. Scope

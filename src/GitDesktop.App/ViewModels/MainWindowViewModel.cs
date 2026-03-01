@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Input;
 using GitDesktop.App.Models;
 using GitDesktop.App.Services;
@@ -199,7 +200,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var name = System.IO.Path.GetFileName(path.TrimEnd(System.IO.Path.DirectorySeparatorChar));
+        var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
         var tab  = new RepositoryTabViewModel(_client, path, name);
         Tabs.Add(tab);
         SelectedTab = tab;

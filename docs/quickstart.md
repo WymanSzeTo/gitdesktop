@@ -55,11 +55,32 @@ dotnet publish src/GitDesktop.Cli -c Release -o ./out/cli
 ## 4. Run the Desktop App
 
 ```bash
-dotnet run --project src/GitDesktop.App -- /path/to/repo
+dotnet run --project src/GitDesktop.App
 ```
 
-The application opens a full Avalonia GUI with six views — Status, Branches, History, Tags,
-Remotes, and Stash — providing complete git functionality in a cross-platform desktop interface.
+The application opens a full Avalonia GUI. Enter a repository path in the sidebar and click
+**Open** to open it as a new tab. Previously-opened repositories are remembered across sessions
+and appear in the **Saved Repositories** list for one-click reopening.
+
+### Views available per tab
+
+| View | Features |
+|------|----------|
+| **Status** | Staged/unstaged/untracked files; select a file to see a colour-highlighted diff (green=add, red=remove, blue=hunk) |
+| **Files** | Filterable list of all tracked files (`git ls-files`) |
+| **Branches** | Create, switch, delete, rename, merge branches |
+| **History** | Commit log with diff, cherry-pick, revert, reset |
+| **Tags** | Create and delete tags |
+| **Remotes** | Add and remove remotes |
+| **Stash** | Push, apply, pop, drop stashes |
+
+### Customisation
+
+The top-right toolbar provides:
+
+* **Theme** drop-down — Dark / Light / Monokai / Solarized Dark / Nord
+* **Font size** slider — 9 px to 24 px
+* **Save** button — persists current theme and font size to `config.json`
 
 ---
 

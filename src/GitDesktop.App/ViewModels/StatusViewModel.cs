@@ -66,7 +66,33 @@ public sealed class StatusViewModel : ViewModelBase
     /// <summary>Gets the diff lines for the selected file.</summary>
     public ObservableCollection<DiffLineViewModel> DiffLines { get; }
 
-    /// <summary>Gets the currently checked-out branch name.</summary>
+    /// <summary>
+    /// <summary>
+    /// Loads the diff for <paramref name="entry"/> into <see cref="DiffLines"/>.
+    /// Exposed as <see langword="public"/> so callers (e.g. tests) can await it directly.
+    /// The <see cref="SelectedFile"/> setter calls this as fire-and-forget.
+    /// </summary>
+    public async Task LoadDiffAsync(StatusEntry? entry)
+    {
+        DiffLines.Clear();
+        if (entry == null) return;
+
+        IsDiffLoading = true;
+        try
+        {
+            var result = await _client.History.DiffAsync(_repoPath, entry.Path,
+                cached: ShouldUseCachedDiff(entry));
+            if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
+                return;
+
+            foreach (var vm in ParseDiffLines(result.Output))
+                DiffLines.Add(vm);
+        }
+        finally
+        {
+            IsDiffLoading = false;
+        }
+    }
     public string CurrentBranch
     {
         get => _currentBranch;
@@ -250,29 +276,14 @@ public sealed class StatusViewModel : ViewModelBase
 
     // ── Diff loading ──────────────────────────────────────────────────────────
 
-    private async Task LoadDiffAsync(StatusEntry? entry)
+    private static bool ShouldUseCachedDiff(StatusEntry entry)
     {
-        DiffLines.Clear();
-        if (entry == null) return;
-
-        IsDiffLoading = true;
-        try
-        {
-            // For staged files use --cached; for working-tree files don't.
-            bool isCached = entry.IndexStatus != FileStatusKind.Untracked
-                         && entry.IndexStatus != FileStatusKind.Modified;
-
-            var result = await _client.History.DiffAsync(_repoPath, entry.Path, cached: isCached);
-            if (!result.Success || string.IsNullOrWhiteSpace(result.Output))
-                return;
-
-            foreach (var vm in ParseDiffLines(result.Output))
-                DiffLines.Add(vm);
-        }
-        finally
-        {
-            IsDiffLoading = false;
-        }
+        // Use --cached (diff index vs HEAD) for files that are staged.
+        // Staged files have an IndexStatus other than Untracked or Modified
+        // (i.e. Added, Renamed, Copied, Deleted, or Unmerged).
+        // For working-tree changes (Modified, Untracked) use the plain diff.
+        return entry.IndexStatus != FileStatusKind.Untracked
+            && entry.IndexStatus != FileStatusKind.Modified;
     }
 
     /// <summary>Converts raw unified-diff text into a list of <see cref="DiffLineViewModel"/>.</summary>

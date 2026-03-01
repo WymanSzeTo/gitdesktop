@@ -21,7 +21,11 @@ public sealed class App : Application
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             // Apply theme from persisted config before showing the window.
-            _ = ApplyStoredThemeAsync();
+            // ApplyStoredThemeAsync swallows all exceptions internally, so
+            // the fire-and-forget pattern is safe here.
+            ApplyStoredThemeAsync().ContinueWith(
+                t => { /* exceptions already caught inside */ },
+                TaskContinuationOptions.OnlyOnFaulted);
             desktop.MainWindow = new MainWindow();
         }
 
