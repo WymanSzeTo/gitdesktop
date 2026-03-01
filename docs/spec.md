@@ -15,12 +15,14 @@ GitDesktop is a **.NET 10** (C#) cross-platform Git client.  It consists of thre
 | Feature | Description |
 |---------|-------------|
 | **Multi-repository tabs** | Multiple repositories can be opened simultaneously, each in its own tab; opening the same path twice switches to the existing tab |
-| **Saved repositories** | Known repository paths and names are persisted in JSON config and shown in the sidebar |
+| **Saved repositories** | Known repository paths and names are persisted in JSON config and shown in the sidebar; the sidebar updates immediately when a repository is opened or removed |
 | **Custom repository name** | An optional "Custom name" field lets users assign a display name when opening a repository |
-| **Tab rename** | The "TAB NAME" field in the sidebar allows renaming the currently open tab; the new name is persisted to config |
+| **Tab rename** | The "TAB NAME" field in the sidebar allows renaming the currently open tab; the new name is persisted to config and reflected in the sidebar immediately |
+| **Remove saved repository** | Clicking ✕ in the sidebar removes a repository from the saved list and closes any open tab for it immediately |
 | **Session restore** | All open repository tabs (and the active selection) are re-opened automatically on the next launch |
 | **Status & diff view** | Staged/unstaged/untracked files; selecting a file loads a syntax-highlighted diff |
-| **File browser** | Filterable list of all tracked files via `git ls-files` |
+| **File browser** | Filterable list of all tracked files via `git ls-files`; file content is shown from HEAD, falling back to the working tree for newly staged files |
+| **Operation status** | The toolbar shows live in-progress indicators ("Fetching…", "Pulling…", "Pushing…") and the status bar shows the result ("Fetch complete.", error, etc.) immediately after the operation finishes |
 | **5 colour themes** | Dark (default), Light, Monokai, Solarized Dark, Nord — switchable live |
 | **Adjustable font size** | Slider in the toolbar; persisted in config |
 

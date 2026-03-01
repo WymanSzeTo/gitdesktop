@@ -138,5 +138,100 @@ public class MainWindowViewModelTests : IDisposable
         Assert.False(vm.IsOperationInProgress);
         Assert.Null(vm.OperationStatus);
     }
+
+    // ── New behaviour tests ───────────────────────────────────────────────────
+
+    [Fact]
+    public async Task RemoveSavedRepositoryAsync_AlsoClosesOpenTab()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess(".git\nfalse\nmain");
+        mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n");
+        mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
+
+        Assert.Single(vm.Tabs);
+
+        var entry = vm.KnownRepositories.First();
+        await vm.RemoveSavedRepositoryAsync(entry);
+
+        // The tab must be closed and the saved entry removed.
+        Assert.Empty(vm.Tabs);
+        Assert.Empty(vm.KnownRepositories);
+    }
+
+    [Fact]
+    public async Task SelectedTab_ErrorMessageChange_PropagatesPropertyChangedOnMainWindow()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess(".git\nfalse\nmain");
+        mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n");
+        mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
+
+        var notified = new HashSet<string>();
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName != null) notified.Add(e.PropertyName); };
+
+        // Simulating a post-fetch error message update on the tab.
+        vm.SelectedTab!.ErrorMessage = "Fetch complete.";
+
+        Assert.Contains(nameof(MainWindowViewModel.ErrorMessage), notified);
+        Assert.Equal("Fetch complete.", vm.ErrorMessage);
+    }
+
+    [Fact]
+    public async Task KnownRepositories_AfterOpen_ReflectsNewEntry()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess(".git\nfalse\nmain");
+        mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n");
+        mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+
+        Assert.Empty(vm.KnownRepositories);
+
+        vm.RepoPath = "/projects/my-repo";
+        await vm.OpenRepositoryAsync();
+
+        Assert.Single(vm.KnownRepositories);
+        Assert.Equal("my-repo", vm.KnownRepositories[0].Name);
+    }
+
+    [Fact]
+    public async Task KnownRepositories_PropertyChangedFiresNewReference()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess(".git\nfalse\nmain");
+        mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n");
+        mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+
+        // Capture two consecutive reads of KnownRepositories to verify they are different
+        // reference objects (enabling Avalonia to detect the change in a ListBox binding).
+        var before = vm.KnownRepositories;
+
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
+
+        var after = vm.KnownRepositories;
+
+        Assert.NotSame(before, after);
+    }
 }
 

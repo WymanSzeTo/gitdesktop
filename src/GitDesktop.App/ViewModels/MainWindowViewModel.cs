@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.ComponentModel;
 using System.IO;
 using System.Windows.Input;
 using GitDesktop.App.Models;
@@ -100,8 +101,16 @@ public sealed class MainWindowViewModel : ViewModelBase
         get => _selectedTab;
         set
         {
+            var oldTab = _selectedTab;
             if (SetField(ref _selectedTab, value))
             {
+                // Forward property change notifications from the active tab to this view model
+                // so that the toolbar and status bar update live during git operations.
+                if (oldTab != null)
+                    oldTab.PropertyChanged -= OnSelectedTabPropertyChanged;
+                if (value != null)
+                    value.PropertyChanged += OnSelectedTabPropertyChanged;
+
                 Title = value != null ? $"GitDesktop — {value.RepoPath}" : "GitDesktop";
 
                 // Sync the editable name field to the newly selected tab.
@@ -136,8 +145,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         }
     }
 
-    /// <summary>Gets the list of known repositories from the config (for the sidebar).</summary>
-    public IReadOnlyList<RepositoryEntry> KnownRepositories => _config.Repositories;
+    /// <summary>Gets the list of known repositories from the config (for the sidebar).
+    /// Returns a new <see cref="ReadOnlyCollection{T}"/> wrapper on each call so that Avalonia's
+    /// binding system always sees a different reference and re-populates the ListBox.</summary>
+    public IReadOnlyList<RepositoryEntry> KnownRepositories => _config.Repositories.AsReadOnly();
 
     // ── Pass-through properties (delegates to SelectedTab) ───────────────────
 
@@ -322,10 +333,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// <summary>
     /// Removes a saved repository entry by path. Exposed as <see langword="public"/>
     /// so callers (e.g. tests) can await it directly.
+    /// Also closes any open tab for that repository immediately.
     /// </summary>
     public async Task RemoveSavedRepositoryAsync(RepositoryEntry? entry)
     {
         if (entry == null) return;
+
+        // Close the open tab for this repository (if any) so all UI state is removed immediately.
+        var normalised = Path.GetFullPath(entry.Path);
+        var openTab = Tabs.FirstOrDefault(t => Path.GetFullPath(t.RepoPath) == normalised);
+        if (openTab != null)
+            CloseTab(openTab);
+
         await _configService.RemoveRepositoryAsync(_config, entry.Path);
         OnPropertyChanged(nameof(KnownRepositories));
     }
@@ -367,6 +386,26 @@ public sealed class MainWindowViewModel : ViewModelBase
         _config.Theme    = _selectedTheme;
         _config.FontSize = _fontSize;
         await _configService.SaveAsync(_config);
+    }
+
+    /// <summary>
+    /// Forwards selected tab's property change events to this view model so the toolbar
+    /// and status bar update live during Fetch, Pull, Push, and Commit operations.
+    /// </summary>
+    private void OnSelectedTabPropertyChanged(object? sender, PropertyChangedEventArgs e)
+    {
+        switch (e.PropertyName)
+        {
+            case nameof(RepositoryTabViewModel.IsOperationInProgress):
+                OnPropertyChanged(nameof(IsOperationInProgress));
+                break;
+            case nameof(RepositoryTabViewModel.OperationStatus):
+                OnPropertyChanged(nameof(OperationStatus));
+                break;
+            case nameof(RepositoryTabViewModel.ErrorMessage):
+                OnPropertyChanged(nameof(ErrorMessage));
+                break;
+        }
     }
 
     /// <summary>Loads the configuration from disk. Exposed for testing.</summary>

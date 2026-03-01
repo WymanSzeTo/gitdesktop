@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.IO;
 using System.Windows.Input;
 using GitDesktop.Core;
 
@@ -100,8 +101,10 @@ public sealed class FilesViewModel : ViewModelBase
     }
 
     /// <summary>
-    /// Loads the content of <paramref name="filePath"/> from HEAD using
-    /// <c>git show HEAD:&lt;path&gt;</c> and populates <see cref="ContentLines"/>.
+    /// Loads the content of <paramref name="filePath"/> and populates <see cref="ContentLines"/>.
+    /// First attempts <c>git show HEAD:&lt;path&gt;</c> to get the committed version.
+    /// If that fails (e.g. the file is newly staged but not yet committed), falls back to
+    /// reading the file directly from the working tree so the content is always visible.
     /// Exposed as <see langword="public"/> so callers (e.g. tests) can await it directly.
     /// </summary>
     public async Task LoadFileContentAsync(string? filePath)
@@ -115,9 +118,23 @@ public sealed class FilesViewModel : ViewModelBase
             // Quote the path to handle spaces and special characters safely.
             var safePath = filePath.Replace("\"", "\\\"");
             var result = await _client.Advanced.RunRawAsync(_repoPath, $"show HEAD:\"{safePath}\"");
-            if (!result.Success || string.IsNullOrEmpty(result.Output)) return;
 
-            foreach (var line in result.Output.Split('\n'))
+            string? content = null;
+            if (result.Success && !string.IsNullOrEmpty(result.Output))
+            {
+                content = result.Output;
+            }
+            else
+            {
+                // Fallback: read from the working tree so newly staged / modified files are shown.
+                var fullPath = Path.GetFullPath(filePath, _repoPath);
+                if (File.Exists(fullPath))
+                    content = await File.ReadAllTextAsync(fullPath);
+            }
+
+            if (content == null) return;
+
+            foreach (var line in content.Split('\n'))
                 ContentLines.Add(new FileLineViewModel(line, ClassifyLine(line)));
         }
         finally

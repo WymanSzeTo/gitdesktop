@@ -125,6 +125,35 @@ public class FilesViewModelTests
     }
 
     [Fact]
+    public async Task LoadFileContentAsync_GitFailure_FallsBackToDiskFile()
+    {
+        // Write a temporary file to the working tree so the fallback path can read it.
+        var tempDir  = Path.Combine(Path.GetTempPath(), $"GitDesktop_FV_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(tempDir);
+        var fileName = "new_file.txt";
+        var content  = "hello from disk\nsecond line\n";
+        await File.WriteAllTextAsync(Path.Combine(tempDir, fileName), content);
+
+        try
+        {
+            var mock = new MockGitExecutor();
+            // git show HEAD:new_file.txt fails (file not yet committed)
+            mock.EnqueueFailure("fatal: Path 'new_file.txt' does not exist in 'HEAD'", 128);
+
+            var vm = new FilesViewModel(new GitDesktopClient(mock), tempDir);
+            await vm.LoadFileContentAsync(fileName);
+
+            // The fallback should have populated ContentLines from the disk file.
+            Assert.NotEmpty(vm.ContentLines);
+            Assert.Equal("hello from disk", vm.ContentLines[0].Content);
+        }
+        finally
+        {
+            Directory.Delete(tempDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ClassifyLine_CommentLine_ReturnsComment()
     {
         Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("// a comment"));
