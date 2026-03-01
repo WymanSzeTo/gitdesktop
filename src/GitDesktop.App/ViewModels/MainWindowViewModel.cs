@@ -41,12 +41,13 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Tabs = [];
 
-        OpenRepositoryCommand   = new AsyncRelayCommand(OpenRepositoryAsync, () => !string.IsNullOrWhiteSpace(RepoPath));
-        AddRepositoryCommand    = new AsyncRelayCommand<string>(path => AddRepositoryByPathAsync(path));
-        CloseTabCommand         = new RelayCommand<RepositoryTabViewModel>(CloseTab);
-        SaveSettingsCommand     = new AsyncRelayCommand(SaveSettingsAsync);
-        LoadConfigCommand       = new AsyncRelayCommand(LoadConfigAsync);
-        SaveTabNameCommand      = new AsyncRelayCommand(SaveTabNameAsync);
+        OpenRepositoryCommand          = new AsyncRelayCommand(OpenRepositoryAsync, () => !string.IsNullOrWhiteSpace(RepoPath));
+        AddRepositoryCommand           = new AsyncRelayCommand<string>(path => AddRepositoryByPathAsync(path));
+        RemoveSavedRepositoryCommand   = new AsyncRelayCommand<RepositoryEntry>(RemoveSavedRepositoryAsync);
+        CloseTabCommand                = new RelayCommand<RepositoryTabViewModel>(CloseTab);
+        SaveSettingsCommand            = new AsyncRelayCommand(SaveSettingsAsync);
+        LoadConfigCommand              = new AsyncRelayCommand(LoadConfigAsync);
+        SaveTabNameCommand             = new AsyncRelayCommand(SaveTabNameAsync);
     }
 
     // ── Properties ────────────────────────────────────────────────────────────
@@ -118,6 +119,8 @@ public sealed class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(FetchCommand));
                 OnPropertyChanged(nameof(PullCommand));
                 OnPropertyChanged(nameof(PushCommand));
+                OnPropertyChanged(nameof(IsOperationInProgress));
+                OnPropertyChanged(nameof(OperationStatus));
 
                 // Notify view-navigation commands so the sidebar buttons re-evaluate.
                 OnPropertyChanged(nameof(ShowStatusCommand));
@@ -159,6 +162,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     public RemotesViewModel?  RemotesVM  => _selectedTab?.RemotesVM;
     public StashViewModel?    StashVM    => _selectedTab?.StashVM;
     public FilesViewModel?    FilesVM    => _selectedTab?.FilesVM;
+
+    /// <summary>Gets a value indicating whether the active tab has a git operation in progress.</summary>
+    public bool IsOperationInProgress => _selectedTab?.IsOperationInProgress ?? false;
+
+    /// <summary>Gets the current operation status message from the active tab.</summary>
+    public string? OperationStatus => _selectedTab?.OperationStatus;
 
     // ── Pass-through commands (delegates to SelectedTab) ─────────────────────
 
@@ -213,6 +222,9 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     /// <summary>Opens a repository tab by path (used from the saved-repos list).</summary>
     public ICommand AddRepositoryCommand { get; }
+
+    /// <summary>Removes a repository entry from the saved list.</summary>
+    public ICommand RemoveSavedRepositoryCommand { get; }
 
     /// <summary>Closes a repository tab.</summary>
     public ICommand CloseTabCommand { get; }
@@ -306,6 +318,18 @@ public sealed class MainWindowViewModel : ViewModelBase
         // Load data for the new tab.
         await tab.LoadAsync();
     }
+
+    /// <summary>
+    /// Removes a saved repository entry by path. Exposed as <see langword="public"/>
+    /// so callers (e.g. tests) can await it directly.
+    /// </summary>
+    public async Task RemoveSavedRepositoryAsync(RepositoryEntry? entry)
+    {
+        if (entry == null) return;
+        await _configService.RemoveRepositoryAsync(_config, entry.Path);
+        OnPropertyChanged(nameof(KnownRepositories));
+    }
+
 
     private void CloseTab(RepositoryTabViewModel? tab)
     {

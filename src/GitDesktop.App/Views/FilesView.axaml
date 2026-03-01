@@ -29,20 +29,71 @@
                      FontSize="{DynamicResource AppFontSize}"/>
         </Border>
 
-        <!-- File list -->
-        <ListBox Grid.Row="2"
-                 ItemsSource="{Binding FilteredFiles}"
-                 Background="{DynamicResource ThemeContentBackground}">
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding}"
-                               FontFamily="Cascadia Code,Consolas,monospace"
-                               FontSize="{DynamicResource AppFontSize}"
-                               Foreground="{DynamicResource ThemePrimaryText}"
-                               Margin="4,2"/>
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-        </ListBox>
+        <!-- Split: file list (left) + file content viewer (right) -->
+        <Grid Grid.Row="2" ColumnDefinitions="260,Auto,*">
+
+            <!-- File list -->
+            <ListBox Grid.Column="0"
+                     ItemsSource="{Binding FilteredFiles}"
+                     SelectedItem="{Binding SelectedFile}"
+                     Background="{DynamicResource ThemeContentBackground}">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}"
+                                   FontFamily="Cascadia Code,Consolas,monospace"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemePrimaryText}"
+                                   Margin="4,2"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+            </ListBox>
+
+            <!-- Splitter -->
+            <GridSplitter Grid.Column="1" Width="4"
+                          Background="{DynamicResource ThemeBorderColor}"
+                          VerticalAlignment="Stretch"/>
+
+            <!-- File content viewer -->
+            <Grid Grid.Column="2" RowDefinitions="Auto,*">
+                <Border Grid.Row="0"
+                        Background="{DynamicResource ThemePanelBackground}" Padding="8,4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="File:" FontWeight="Bold"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemePrimaryText}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding SelectedFile}"
+                                   FontFamily="Cascadia Code,Consolas,monospace"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemeAccentColor}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <TextBlock Text="(select a file to view its content)"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemeSecondaryText}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNull}}"/>
+                    </StackPanel>
+                </Border>
+                <ScrollViewer Grid.Row="1"
+                              Background="{DynamicResource ThemeContentBackground}"
+                              HorizontalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding ContentLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:FileLineViewModel">
+                                <TextBlock Text="{Binding Content}"
+                                           Foreground="{DynamicResource {Binding ForegroundKey}}"
+                                           FontFamily="Cascadia Code,Consolas,monospace"
+                                           FontSize="{DynamicResource AppFontSize}"
+                                           TextWrapping="NoWrap"
+                                           Margin="4,0"/>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
+
+        </Grid>
 
     </Grid>
 </UserControl>

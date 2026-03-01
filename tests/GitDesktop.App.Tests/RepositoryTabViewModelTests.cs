@@ -83,4 +83,14 @@ public class RepositoryTabViewModelTests
 
         Assert.Equal("main", tab.StatusVM.CurrentBranch);
     }
+
+    [Fact]
+    public void Constructor_IsOperationInProgress_IsFalse()
+    {
+        var mock = new MockGitExecutor();
+        var tab  = new RepositoryTabViewModel(new GitDesktopClient(mock), "/repo", "repo");
+
+        Assert.False(tab.IsOperationInProgress);
+        Assert.Null(tab.OperationStatus);
+    }
 }

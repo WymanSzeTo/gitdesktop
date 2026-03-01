@@ -1,3 +1,4 @@
+using GitDesktop.App.Models;
 using GitDesktop.App.Services;
 using GitDesktop.App.ViewModels;
 using GitDesktop.Core;
@@ -99,4 +100,43 @@ public class MainWindowViewModelTests : IDisposable
         Assert.NotNull(vm.StashVM);
         Assert.IsType<StatusViewModel>(vm.CurrentView);
     }
+
+    [Fact]
+    public async Task RemoveSavedRepositoryCommand_RemovesEntryFromConfig()
+    {
+        var cfgPath = Path.Combine(_tempDir, $"cfg_{Guid.NewGuid():N}.json");
+        var svc = new AppConfigService(cfgPath);
+        var cfg = new AppConfig
+        {
+            Repositories =
+            [
+                new RepositoryEntry { Name = "repo-a", Path = "/home/user/repo-a" },
+                new RepositoryEntry { Name = "repo-b", Path = "/home/user/repo-b" },
+            ],
+        };
+        await svc.SaveAsync(cfg);
+
+        var mock = new MockGitExecutor();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), svc);
+        await vm.LoadConfigAsync();
+
+        Assert.Equal(2, vm.KnownRepositories.Count);
+
+        var entryToRemove = vm.KnownRepositories[0];
+        await vm.RemoveSavedRepositoryAsync(entryToRemove);
+
+        Assert.Single(vm.KnownRepositories);
+        Assert.Equal("repo-b", vm.KnownRepositories[0].Name);
+    }
+
+    [Fact]
+    public void IsOperationInProgress_NoTabSelected_ReturnsFalse()
+    {
+        var mock = new MockGitExecutor();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+
+        Assert.False(vm.IsOperationInProgress);
+        Assert.Null(vm.OperationStatus);
+    }
 }
+
