@@ -19,9 +19,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     private AppConfig _config = new();
 
     private string _repoPath = string.Empty;
+    private string _customName = string.Empty;
+    private string _selectedTabName = string.Empty;
     private string _title = "GitDesktop";
     private string? _globalErrorMessage;
     private RepositoryTabViewModel? _selectedTab;
+
+    // Prevents session saves from firing during the initial startup restore.
+    private bool _sessionReady;
 
     // ── Theme / font ─────────────────────────────────────────────────────────
     private string _selectedTheme = "Dark";
@@ -36,11 +41,12 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Tabs = [];
 
-        OpenRepositoryCommand = new AsyncRelayCommand(OpenRepositoryAsync, () => !string.IsNullOrWhiteSpace(RepoPath));
-        AddRepositoryCommand  = new AsyncRelayCommand<string>(AddRepositoryByPathAsync);
-        CloseTabCommand       = new RelayCommand<RepositoryTabViewModel>(CloseTab);
-        SaveSettingsCommand   = new AsyncRelayCommand(SaveSettingsAsync);
-        LoadConfigCommand     = new AsyncRelayCommand(LoadConfigAsync);
+        OpenRepositoryCommand   = new AsyncRelayCommand(OpenRepositoryAsync, () => !string.IsNullOrWhiteSpace(RepoPath));
+        AddRepositoryCommand    = new AsyncRelayCommand<string>(path => AddRepositoryByPathAsync(path));
+        CloseTabCommand         = new RelayCommand<RepositoryTabViewModel>(CloseTab);
+        SaveSettingsCommand     = new AsyncRelayCommand(SaveSettingsAsync);
+        LoadConfigCommand       = new AsyncRelayCommand(LoadConfigAsync);
+        SaveTabNameCommand      = new AsyncRelayCommand(SaveTabNameAsync);
     }
 
     // ── Properties ────────────────────────────────────────────────────────────
@@ -54,6 +60,27 @@ public sealed class MainWindowViewModel : ViewModelBase
             SetField(ref _repoPath, value);
             ((AsyncRelayCommand)OpenRepositoryCommand).RaiseCanExecuteChanged();
         }
+    }
+
+    /// <summary>
+    /// Gets or sets the optional display name entered by the user before opening a repository.
+    /// When non-empty, the new tab will use this name; otherwise the folder name is used.
+    /// </summary>
+    public string CustomName
+    {
+        get => _customName;
+        set => SetField(ref _customName, value);
+    }
+
+    /// <summary>
+    /// Gets or sets the editable display name of the currently selected tab.
+    /// Changing this value does NOT persist immediately; call <see cref="SaveTabNameCommand"/>
+    /// (or press the Rename button in the UI) to persist the change.
+    /// </summary>
+    public string SelectedTabName
+    {
+        get => _selectedTabName;
+        set => SetField(ref _selectedTabName, value);
     }
 
     /// <summary>Gets the title displayed in the window title bar.</summary>
@@ -75,6 +102,10 @@ public sealed class MainWindowViewModel : ViewModelBase
             if (SetField(ref _selectedTab, value))
             {
                 Title = value != null ? $"GitDesktop — {value.RepoPath}" : "GitDesktop";
+
+                // Sync the editable name field to the newly selected tab.
+                SelectedTabName = value?.Name ?? string.Empty;
+
                 OnPropertyChanged(nameof(ErrorMessage));
                 OnPropertyChanged(nameof(CurrentView));
                 OnPropertyChanged(nameof(StatusVM));
@@ -87,6 +118,17 @@ public sealed class MainWindowViewModel : ViewModelBase
                 OnPropertyChanged(nameof(FetchCommand));
                 OnPropertyChanged(nameof(PullCommand));
                 OnPropertyChanged(nameof(PushCommand));
+
+                // Notify view-navigation commands so the sidebar buttons re-evaluate.
+                OnPropertyChanged(nameof(ShowStatusCommand));
+                OnPropertyChanged(nameof(ShowBranchesCommand));
+                OnPropertyChanged(nameof(ShowHistoryCommand));
+                OnPropertyChanged(nameof(ShowTagsCommand));
+                OnPropertyChanged(nameof(ShowRemotesCommand));
+                OnPropertyChanged(nameof(ShowStashCommand));
+                OnPropertyChanged(nameof(ShowFilesCommand));
+
+                _ = SaveSessionAsync();
             }
         }
     }
@@ -181,17 +223,63 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// <summary>Reloads the config from disk.</summary>
     public ICommand LoadConfigCommand { get; }
 
+    /// <summary>Renames the currently selected tab using <see cref="SelectedTabName"/> and persists the change.</summary>
+    public ICommand SaveTabNameCommand { get; }
+
     // ── Implementation ────────────────────────────────────────────────────────
 
-    /// <summary>Opens a repository at <see cref="RepoPath"/> and creates a new tab.</summary>
+    /// <summary>
+    /// Opens a repository at <see cref="RepoPath"/>, optionally using <see cref="CustomName"/>
+    /// as the display name, and creates a new tab (or switches to the existing one).
+    /// </summary>
     public async Task OpenRepositoryAsync()
     {
-        await AddRepositoryByPathAsync(RepoPath);
+        var explicitName = string.IsNullOrWhiteSpace(CustomName) ? null : CustomName;
+        await AddRepositoryByPathAsync(RepoPath, explicitName);
+        // Clear the custom-name field only when we successfully provided one.
+        if (explicitName is not null)
+            CustomName = string.Empty;
     }
 
-    private async Task AddRepositoryByPathAsync(string? path)
+    /// <summary>
+    /// Loads the application configuration and then re-opens all repositories that were
+    /// open in the previous session, restoring the previously active tab.
+    /// Called once on application startup.
+    /// </summary>
+    public async Task StartupAsync()
+    {
+        await LoadConfigAsync();
+
+        foreach (var path in _config.OpenRepositoryPaths.ToList())
+        {
+            await AddRepositoryByPathAsync(path);
+        }
+
+        // Restore the previously active tab.
+        if (_config.SelectedRepositoryPath is not null)
+        {
+            var norm = Path.GetFullPath(_config.SelectedRepositoryPath);
+            var tab  = Tabs.FirstOrDefault(t => Path.GetFullPath(t.RepoPath) == norm);
+            if (tab != null)
+                SelectedTab = tab;
+        }
+
+        _sessionReady = true;
+    }
+
+    private async Task AddRepositoryByPathAsync(string? path, string? explicitName = null)
     {
         if (string.IsNullOrWhiteSpace(path)) return;
+
+        var normalised = Path.GetFullPath(path);
+
+        // Do not open the same repository more than once — switch to the existing tab instead.
+        var existing = Tabs.FirstOrDefault(t => Path.GetFullPath(t.RepoPath) == normalised);
+        if (existing != null)
+        {
+            SelectedTab = existing;
+            return;
+        }
 
         var repo = await _client.Repository.OpenAsync(path);
         if (repo == null)
@@ -200,14 +288,20 @@ public sealed class MainWindowViewModel : ViewModelBase
             return;
         }
 
-        var name = Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
-        var tab  = new RepositoryTabViewModel(_client, path, name);
+        // Determine display name: explicit > stored config > folder name.
+        var storedEntry = _config.Repositories.FirstOrDefault(r => Path.GetFullPath(r.Path) == normalised);
+        var name = explicitName
+            ?? storedEntry?.Name
+            ?? Path.GetFileName(path.TrimEnd(Path.DirectorySeparatorChar));
+
+        var tab = new RepositoryTabViewModel(_client, path, name);
         Tabs.Add(tab);
         SelectedTab = tab;
 
-        // Persist to config.
-        await _configService.AddRepositoryAsync(_config, path, name);
+        // Persist to config (also saves the session).
+        await _configService.AddRepositoryAsync(_config, normalised, name);
         OnPropertyChanged(nameof(KnownRepositories));
+        await SaveSessionAsync();
 
         // Load data for the new tab.
         await tab.LoadAsync();
@@ -228,6 +322,20 @@ public sealed class MainWindowViewModel : ViewModelBase
             var newIdx = Math.Max(0, Math.Min(idx, Tabs.Count - 1));
             SelectedTab = Tabs[newIdx];
         }
+
+        _ = SaveSessionAsync();
+    }
+
+    /// <summary>
+    /// Applies <see cref="SelectedTabName"/> to the current tab and persists the change.
+    /// Exposed as public so it can be awaited directly in tests.
+    /// </summary>
+    public async Task SaveTabNameAsync()
+    {
+        if (_selectedTab is null || string.IsNullOrWhiteSpace(_selectedTabName)) return;
+        _selectedTab.Name = _selectedTabName;
+        await _configService.UpdateRepositoryNameAsync(_config, _selectedTab.RepoPath, _selectedTabName);
+        OnPropertyChanged(nameof(KnownRepositories));
     }
 
     private async Task SaveSettingsAsync()
@@ -250,6 +358,19 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         ThemeManager.ApplyTheme(_selectedTheme);
         ApplyFontSize(_fontSize);
+    }
+
+    /// <summary>
+    /// Persists the list of currently open tab paths and the selected path to disk.
+    /// No-op during the initial startup restore to avoid overwriting the saved session.
+    /// </summary>
+    private Task SaveSessionAsync()
+    {
+        if (!_sessionReady) return Task.CompletedTask;
+        return _configService.UpdateOpenSessionAsync(
+            _config,
+            Tabs.Select(t => t.RepoPath),
+            _selectedTab?.RepoPath);
     }
 
     private static void ApplyFontSize(double size)

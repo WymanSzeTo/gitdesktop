@@ -118,4 +118,57 @@ public class AppConfigServiceTests : IDisposable
     {
         Assert.Contains("GitDesktop", AppConfigService.DefaultConfigFilePath);
     }
+
+    [Fact]
+    public async Task UpdateRepositoryNameAsync_ExistingPath_UpdatesName()
+    {
+        var svc = MakeSvc();
+        var cfg = new AppConfig
+        {
+            Repositories =
+            [
+                new RepositoryEntry { Name = "old-name", Path = "/home/user/repo-a" },
+            ],
+        };
+
+        await svc.UpdateRepositoryNameAsync(cfg, "/home/user/repo-a", "new-name");
+
+        Assert.Equal("new-name", cfg.Repositories[0].Name);
+
+        // Verify persisted.
+        var loaded = await svc.LoadAsync();
+        Assert.Equal("new-name", loaded.Repositories[0].Name);
+    }
+
+    [Fact]
+    public async Task UpdateRepositoryNameAsync_UnknownPath_IsNoOp()
+    {
+        var svc = MakeSvc();
+        var cfg = new AppConfig
+        {
+            Repositories =
+            [
+                new RepositoryEntry { Name = "repo-a", Path = "/home/user/repo-a" },
+            ],
+        };
+
+        // Should not throw or modify existing entries.
+        await svc.UpdateRepositoryNameAsync(cfg, "/home/user/other", "new-name");
+
+        Assert.Single(cfg.Repositories);
+        Assert.Equal("repo-a", cfg.Repositories[0].Name);
+    }
+
+    [Fact]
+    public async Task UpdateOpenSessionAsync_PersistsOpenPathsAndSelectedPath()
+    {
+        var svc = MakeSvc();
+        var cfg = new AppConfig();
+
+        await svc.UpdateOpenSessionAsync(cfg, ["/repo-a", "/repo-b"], "/repo-b");
+
+        var loaded = await svc.LoadAsync();
+        Assert.Equal(2, loaded.OpenRepositoryPaths.Count);
+        Assert.Equal("/repo-b", loaded.SelectedRepositoryPath);
+    }
 }

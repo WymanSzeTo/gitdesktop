@@ -14,8 +14,11 @@ GitDesktop is a **.NET 10** (C#) cross-platform Git client.  It consists of thre
 
 | Feature | Description |
 |---------|-------------|
-| **Multi-repository tabs** | Multiple repositories can be opened simultaneously, each in its own tab |
+| **Multi-repository tabs** | Multiple repositories can be opened simultaneously, each in its own tab; opening the same path twice switches to the existing tab |
 | **Saved repositories** | Known repository paths and names are persisted in JSON config and shown in the sidebar |
+| **Custom repository name** | An optional "Custom name" field lets users assign a display name when opening a repository |
+| **Tab rename** | The "TAB NAME" field in the sidebar allows renaming the currently open tab; the new name is persisted to config |
+| **Session restore** | All open repository tabs (and the active selection) are re-opened automatically on the next launch |
 | **Status & diff view** | Staged/unstaged/untracked files; selecting a file loads a syntax-highlighted diff |
 | **File browser** | Filterable list of all tracked files via `git ls-files` |
 | **5 colour themes** | Dark (default), Light, Monokai, Solarized Dark, Nord — switchable live |

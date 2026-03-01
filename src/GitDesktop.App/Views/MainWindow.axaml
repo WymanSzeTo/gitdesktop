@@ -84,6 +84,9 @@
                     <TextBox Text="{Binding RepoPath}" Watermark="Path to repository…"
                              Margin="8,0"
                              FontSize="{DynamicResource AppFontSize}"/>
+                    <TextBox Text="{Binding CustomName}" Watermark="Custom name (optional)…"
+                             Margin="8,4,8,0"
+                             FontSize="{DynamicResource AppFontSize}"/>
                     <Button Content="Open" Command="{Binding OpenRepositoryCommand}"
                             HorizontalAlignment="Stretch" Margin="8,4,8,0"
                             FontSize="{DynamicResource AppFontSize}"/>
@@ -144,6 +147,21 @@
                     <Button Content="Stash"    Command="{Binding ShowStashCommand}"
                             HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
                             FontSize="{DynamicResource AppFontSize}"/>
+
+                    <Separator Background="{DynamicResource ThemeBorderColor}" Margin="8,8"/>
+
+                    <!-- Rename the currently open repository tab -->
+                    <TextBlock Text="TAB NAME"
+                               FontSize="{DynamicResource AppFontSizeSmall}"
+                               Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontWeight="Bold" Margin="12,0,12,4"/>
+                    <TextBox Text="{Binding SelectedTabName}" Watermark="Tab name…"
+                             Margin="8,0"
+                             FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Rename" Command="{Binding SaveTabNameCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,4,8,0"
+                            FontSize="{DynamicResource AppFontSize}"
+                            ToolTip.Tip="Save the new tab name"/>
                 </StackPanel>
 
             </DockPanel>

@@ -7,8 +7,10 @@ Use .Net 10 (major in C#) to develop Git Desktop Client covering all the functio
 - **CLI** — Scriptable `gitdesktop-cli` command-line interface for automation and CI pipelines.
 - **Full Git coverage** — status, branches, history, commits, fetch/pull/push, stash, worktrees, submodules, bisect, LFS, hooks, and more.
 - **MVVM architecture** — clean separation between ViewModels and Views for testability.
-- **Multiple repository tabs** — open several repositories at the same time, each in its own tab.
+- **Multiple repository tabs** — open several repositories at the same time, each in its own tab; opening the same path twice switches to the existing tab instead of duplicating it.
+- **Custom repository names** — supply an optional display name when opening a repository; rename any open tab later from the sidebar.
 - **Saved repositories** — repositories are remembered across sessions via a JSON configuration file.
+- **Session restore** — all tabs open when the app was last closed are re-opened automatically on the next launch, with the previously active tab pre-selected.
 - **Diff highlighting** — staged/unstaged file diffs are shown with syntax-highlighted Add / Delete / Context lines in the Status view.
 - **Repository file list** — browse all tracked files in the active repository with an instant filter.
 - **5 colour themes** — Dark (default), Light, Monokai, Solarized Dark, and Nord.  Switch live from the toolbar.
@@ -30,7 +32,9 @@ Use .Net 10 (major in C#) to develop Git Desktop Client covering all the functio
 dotnet run --project src/GitDesktop.App
 ```
 
-The GUI opens a main window. Enter the path to any local git repository in the sidebar and click **Open** to load it. Previously-opened repositories appear in the **Saved Repositories** list and can be reopened with a single click. Each repository opens in its own tab; switch between tabs freely.
+The GUI opens a main window. Enter the path to any local git repository in the sidebar and click **Open** to load it.  Optionally enter a **Custom name** to give the tab a friendly label; if left blank the folder name is used.  Previously-opened repositories appear in the **Saved Repositories** list and can be reopened with a single click. Each repository opens in its own tab; opening the same repository path a second time switches to the existing tab.  On the next launch GitDesktop automatically re-opens all previously open tabs.
+
+To **rename** an open tab, edit the value in the **TAB NAME** field at the bottom of the sidebar and click **Rename**; the new name is persisted to the configuration file.
 
 #### GUI Views
 
@@ -70,7 +74,9 @@ Example `config.json`:
     { "Name": "other-repo",  "Path": "/home/user/other-repo" }
   ],
   "Theme": "Monokai",
-  "FontSize": 14
+  "FontSize": 14,
+  "OpenRepositoryPaths": ["/home/user/my-project", "/home/user/other-repo"],
+  "SelectedRepositoryPath": "/home/user/my-project"
 }
 ```
 
