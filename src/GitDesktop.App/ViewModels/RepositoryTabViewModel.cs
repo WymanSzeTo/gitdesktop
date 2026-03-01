@@ -15,6 +15,8 @@ public sealed class RepositoryTabViewModel : ViewModelBase
     private string _name;
     private ViewModelBase? _currentView;
     private string? _errorMessage;
+    private bool _isOperationInProgress;
+    private string? _operationStatus;
 
     public RepositoryTabViewModel(GitDesktopClient client, string repoPath, string name)
     {
@@ -69,6 +71,20 @@ public sealed class RepositoryTabViewModel : ViewModelBase
         set => SetField(ref _errorMessage, value);
     }
 
+    /// <summary>Gets a value indicating whether a git operation (Fetch/Pull/Push) is in progress.</summary>
+    public bool IsOperationInProgress
+    {
+        get => _isOperationInProgress;
+        private set => SetField(ref _isOperationInProgress, value);
+    }
+
+    /// <summary>Gets the current operation status message (e.g. "Fetching…", "Pulling…").</summary>
+    public string? OperationStatus
+    {
+        get => _operationStatus;
+        private set => SetField(ref _operationStatus, value);
+    }
+
     /// <summary>Gets or sets the currently displayed child view model.</summary>
     public ViewModelBase? CurrentView
     {
@@ -116,25 +132,55 @@ public sealed class RepositoryTabViewModel : ViewModelBase
     private async Task FetchAsync()
     {
         ErrorMessage = null;
-        var result = await _client.Remote.FetchAsync(_repoPath, prune: true);
-        ErrorMessage = result.Success ? "Fetch complete." : result.Error;
-        if (result.Success) await StatusVM.RefreshAsync();
+        IsOperationInProgress = true;
+        OperationStatus = "Fetching…";
+        try
+        {
+            var result = await _client.Remote.FetchAsync(_repoPath, prune: true);
+            ErrorMessage = result.Success ? "Fetch complete." : result.Error;
+            if (result.Success) await StatusVM.RefreshAsync();
+        }
+        finally
+        {
+            IsOperationInProgress = false;
+            OperationStatus = null;
+        }
     }
 
     private async Task PullAsync()
     {
         ErrorMessage = null;
-        var result = await _client.Remote.PullAsync(_repoPath);
-        ErrorMessage = result.Success ? "Pull complete." : result.Error;
-        if (result.Success)
-            await Task.WhenAll(StatusVM.RefreshAsync(), HistoryVM.RefreshAsync());
+        IsOperationInProgress = true;
+        OperationStatus = "Pulling…";
+        try
+        {
+            var result = await _client.Remote.PullAsync(_repoPath);
+            ErrorMessage = result.Success ? "Pull complete." : result.Error;
+            if (result.Success)
+                await Task.WhenAll(StatusVM.RefreshAsync(), HistoryVM.RefreshAsync());
+        }
+        finally
+        {
+            IsOperationInProgress = false;
+            OperationStatus = null;
+        }
     }
 
     private async Task PushAsync()
     {
         ErrorMessage = null;
-        var result = await _client.Remote.PushAsync(_repoPath);
-        ErrorMessage = result.Success ? "Push complete." : result.Error;
-        if (result.Success) await StatusVM.RefreshAsync();
+        IsOperationInProgress = true;
+        OperationStatus = "Pushing…";
+        try
+        {
+            var result = await _client.Remote.PushAsync(_repoPath);
+            ErrorMessage = result.Success ? "Push complete." : result.Error;
+            if (result.Success) await StatusVM.RefreshAsync();
+        }
+        finally
+        {
+            IsOperationInProgress = false;
+            OperationStatus = null;
+        }
     }
 }

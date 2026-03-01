@@ -79,4 +79,94 @@ public class FilesViewModelTests
 
         Assert.Equal(nameof(FilesViewModel.FilterText), prop);
     }
+
+    [Fact]
+    public async Task SelectedFile_Set_LoadsContentLines()
+    {
+        var mock = new MockGitExecutor();
+        // First: ls-files response; second: show HEAD:README.md response
+        mock.EnqueueSuccess("README.md\n");
+        mock.EnqueueSuccess("# My Project\nThis is a readme.\n");
+
+        var vm = new FilesViewModel(new GitDesktopClient(mock), "/repo");
+        await vm.RefreshAsync();
+
+        await vm.LoadFileContentAsync("README.md");
+
+        Assert.NotEmpty(vm.ContentLines);
+        Assert.Equal("# My Project", vm.ContentLines[0].Content);
+    }
+
+    [Fact]
+    public async Task SelectedFile_SetToNull_ClearsContentLines()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess("public class Foo { }");
+
+        var vm = new FilesViewModel(new GitDesktopClient(mock), "/repo");
+        await vm.LoadFileContentAsync("Foo.cs");
+        Assert.NotEmpty(vm.ContentLines);
+
+        await vm.LoadFileContentAsync(null);
+
+        Assert.Empty(vm.ContentLines);
+    }
+
+    [Fact]
+    public async Task LoadFileContentAsync_GitFailure_LeavesContentEmpty()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueFailure("fatal: Path not found", 128);
+
+        var vm = new FilesViewModel(new GitDesktopClient(mock), "/repo");
+        await vm.LoadFileContentAsync("missing.txt");
+
+        Assert.Empty(vm.ContentLines);
+    }
+
+    [Fact]
+    public void ClassifyLine_CommentLine_ReturnsComment()
+    {
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("// a comment"));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("# shell comment"));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("/* block */"));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("-- SQL comment"));
+    }
+
+    [Fact]
+    public void ClassifyLine_KeywordLine_ReturnsKeyword()
+    {
+        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("public class Foo"));
+        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("namespace MyApp"));
+        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("return value;"));
+    }
+
+    [Fact]
+    public void ClassifyLine_CodeLine_ReturnsCode()
+    {
+        Assert.Equal(FileLineKind.Code, FilesViewModel.ClassifyLine("    x = 42;"));
+        Assert.Equal(FileLineKind.Code, FilesViewModel.ClassifyLine(""));
+    }
+
+    [Fact]
+    public void FileLineViewModel_CommentKind_HasSecondaryTextKey()
+    {
+        var vm = new FileLineViewModel("// comment", FileLineKind.Comment);
+        Assert.Equal("ThemeSecondaryText", vm.ForegroundKey);
+    }
+
+    [Fact]
+    public void FileLineViewModel_KeywordKind_HasAccentColorKey()
+    {
+        var vm = new FileLineViewModel("public class", FileLineKind.Keyword);
+        Assert.Equal("ThemeAccentColor", vm.ForegroundKey);
+    }
+
+    [Fact]
+    public void FileLineViewModel_CodeKind_HasPrimaryTextKey()
+    {
+        var vm = new FileLineViewModel("    x = 1;", FileLineKind.Code);
+        Assert.Equal("ThemePrimaryText", vm.ForegroundKey);
+    }
 }
+
