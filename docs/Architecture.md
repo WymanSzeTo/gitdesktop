@@ -107,6 +107,8 @@ gitdesktop/
 │   │   ├── App.axaml / App.axaml.cs   (theme resources + startup)
 │   │   ├── Models/
 │   │   │   └── AppConfig.cs           (AppConfig, RepositoryEntry)
+│   │   ├── Converters/
+│   │   │   └── ResourceKeyBrushConverter.cs (resource-key → IBrush)
 │   │   ├── Services/
 │   │   │   ├── AppConfigService.cs    (JSON config load/save)
 │   │   │   └── ThemeManager.cs        (5 colour themes + apply)
@@ -238,9 +240,16 @@ pattern:
   the diff is loaded via `HistoryService.DiffAsync` and exposed as a list of
   `DiffLineViewModel` instances.
 * **`DiffLineViewModel`** — wraps a `DiffLine` and exposes `BackgroundKey` / `ForegroundKey`
-  DynamicResource names so the view can colour lines without converters.
+  resource-key strings.  In XAML these are resolved to `IBrush` via `ResourceKeyBrushConverter`.
 * **`FilesViewModel`** — lists all tracked files via `git ls-files` and applies an in-memory
-  filter.
+  filter.  Each content line is wrapped in a `FileLineViewModel` that carries a `ForegroundKey`
+  string resolved in XAML by `ResourceKeyBrushConverter`.
+* **`FileLineViewModel`** — represents a single source-file line with basic syntax classification
+  (`Code`, `Comment`, `Keyword`, `String`) that drives the `ForegroundKey` resource name.
+* **`MainWindowViewModel`** — manages open repository tabs (`Tabs`) and the saved-repositories
+  sidebar list (`KnownRepositories`).  The sidebar list is backed by an
+  `ObservableCollection<RepositoryEntry>` so that Avalonia's `ListBox` receives
+  `INotifyCollectionChanged` notifications on add/remove/rename without stale rendering.
 * **`BranchesViewModel`** — lists all local and remote branches.  Exposes commands to switch,
   create, delete, rename, and merge branches.
 * **`HistoryViewModel`** — displays the commit log and shows the diff for the selected commit.
@@ -253,9 +262,11 @@ pattern:
   wrappers (no external MVVM framework dependency).
 
 The view classes (`StatusView`, `FilesView`, `BranchesView`, `HistoryView`, `TagsView`,
-`RemotesView`, `StashView`) are pure Avalonia `UserControl` XAML. All colours and font sizes
-are bound via `DynamicResource` so they respond immediately when the user switches theme or
-adjusts font size.
+`RemotesView`, `StashView`) are pure Avalonia `UserControl` XAML. Background and foreground
+colours for diff and file-content lines are resolved at runtime through
+`ResourceKeyBrushConverter`, which looks up `Application.Current.Resources` by the key string
+exposed by the view-model.  Other colours and font sizes continue to use `DynamicResource`
+directly, so they respond immediately when the user switches theme or adjusts font size.
 
 **`GitDesktop.Cli`** — a command dispatcher that maps CLI arguments to `GitDesktopClient` calls
 and formats the output for terminal consumption.

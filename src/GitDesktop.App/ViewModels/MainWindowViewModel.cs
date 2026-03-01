@@ -26,6 +26,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     private string? _globalErrorMessage;
     private RepositoryTabViewModel? _selectedTab;
 
+    // Backing collection for the saved-repositories sidebar.
+    // Using ObservableCollection so Avalonia's ListBox receives INotifyCollectionChanged
+    // notifications whenever entries are added, removed, or renamed, avoiding the stale-
+    // last-item display bug that occurred when the list was mutated before PropertyChanged fired.
+    private readonly ObservableCollection<RepositoryEntry> _knownRepositories = [];
+
     // Prevents session saves from firing during the initial startup restore.
     private bool _sessionReady;
 
@@ -146,9 +152,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     }
 
     /// <summary>Gets the list of known repositories from the config (for the sidebar).
-    /// Returns a new <see cref="ReadOnlyCollection{T}"/> wrapper on each call so that Avalonia's
-    /// binding system always sees a different reference and re-populates the ListBox.</summary>
-    public IReadOnlyList<RepositoryEntry> KnownRepositories => _config.Repositories.AsReadOnly();
+    /// Backed by an <see cref="ObservableCollection{T}"/> so that Avalonia's ListBox
+    /// receives <see cref="System.Collections.Specialized.INotifyCollectionChanged"/>
+    /// notifications and always reflects the current state.</summary>
+    public IReadOnlyList<RepositoryEntry> KnownRepositories => _knownRepositories;
 
     // ── Pass-through properties (delegates to SelectedTab) ───────────────────
 
@@ -323,7 +330,12 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         // Persist to config (also saves the session).
         await _configService.AddRepositoryAsync(_config, normalised, name);
-        OnPropertyChanged(nameof(KnownRepositories));
+
+        // Sync the observable sidebar collection if the entry was freshly added to config.
+        var addedEntry = _config.Repositories.FirstOrDefault(r => Path.GetFullPath(r.Path) == normalised);
+        if (addedEntry != null && !_knownRepositories.Contains(addedEntry))
+            _knownRepositories.Add(addedEntry);
+
         await SaveSessionAsync();
 
         // Load data for the new tab.
@@ -346,7 +358,11 @@ public sealed class MainWindowViewModel : ViewModelBase
             CloseTab(openTab);
 
         await _configService.RemoveRepositoryAsync(_config, entry.Path);
-        OnPropertyChanged(nameof(KnownRepositories));
+
+        // Remove from the observable sidebar collection so the ListBox updates immediately.
+        var toRemove = _knownRepositories.FirstOrDefault(r => Path.GetFullPath(r.Path) == normalised);
+        if (toRemove != null)
+            _knownRepositories.Remove(toRemove);
     }
 
 
@@ -378,7 +394,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         if (_selectedTab is null || string.IsNullOrWhiteSpace(_selectedTabName)) return;
         _selectedTab.Name = _selectedTabName;
         await _configService.UpdateRepositoryNameAsync(_config, _selectedTab.RepoPath, _selectedTabName);
-        OnPropertyChanged(nameof(KnownRepositories));
+
+        // Keep the observable sidebar collection in sync with the renamed entry.
+        var normalised = Path.GetFullPath(_selectedTab.RepoPath);
+        var sidebarEntry = _knownRepositories.FirstOrDefault(r => Path.GetFullPath(r.Path) == normalised);
+        if (sidebarEntry != null)
+            sidebarEntry.Name = _selectedTabName;
     }
 
     private async Task SaveSettingsAsync()
@@ -412,7 +433,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     public async Task LoadConfigAsync()
     {
         _config = await _configService.LoadAsync();
-        OnPropertyChanged(nameof(KnownRepositories));
+
+        _knownRepositories.Clear();
+        foreach (var entry in _config.Repositories)
+            _knownRepositories.Add(entry);
 
         _selectedTheme = _config.Theme;
         _fontSize      = _config.FontSize > 0 ? _config.FontSize : 13.0;
