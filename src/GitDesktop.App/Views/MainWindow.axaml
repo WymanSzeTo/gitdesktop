@@ -5,97 +5,211 @@
         x:Class="GitDesktop.App.Views.MainWindow"
         x:DataType="vm:MainWindowViewModel"
         Title="{Binding Title}"
-        Width="1200" Height="750"
-        MinWidth="800" MinHeight="500">
+        Width="1280" Height="800"
+        MinWidth="900" MinHeight="560"
+        Background="{DynamicResource ThemeWindowBackground}">
 
     <DockPanel>
 
         <!-- ── Top toolbar ──────────────────────────────────────────── -->
-        <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8"
-                    Background="#2d2d2d" Margin="0">
-            <TextBlock Text="GitDesktop" FontWeight="Bold" FontSize="16"
-                       VerticalAlignment="Center" Margin="12,8" Foreground="White"/>
-            <Separator Width="1" Background="#555" Margin="0,4"/>
-            <Button Content="Fetch" Command="{Binding FetchCommand}"
-                    Margin="4,4" ToolTip.Tip="Fetch from all remotes (prune)"/>
-            <Button Content="Pull"  Command="{Binding PullCommand}"
-                    Margin="0,4" ToolTip.Tip="Pull from upstream"/>
-            <Button Content="Push"  Command="{Binding PushCommand}"
-                    Margin="0,4" ToolTip.Tip="Push to remote"/>
-        </StackPanel>
+        <Border DockPanel.Dock="Top" Background="{DynamicResource ThemeToolbarBackground}" Padding="0">
+            <DockPanel>
+                <!-- App brand -->
+                <TextBlock DockPanel.Dock="Left" Text="GitDesktop" FontWeight="Bold"
+                           FontSize="{DynamicResource AppFontSizeLarge}"
+                           VerticalAlignment="Center" Margin="14,8"
+                           Foreground="{DynamicResource ThemePrimaryText}"/>
+                <Separator DockPanel.Dock="Left" Width="1"
+                           Background="{DynamicResource ThemeBorderColor}" Margin="0,4"/>
+
+                <!-- Git operation buttons (delegated to selected tab) -->
+                <StackPanel DockPanel.Dock="Left" Orientation="Horizontal" Spacing="4" Margin="8,4">
+                    <Button Content="Fetch" Command="{Binding FetchCommand}"
+                            FontSize="{DynamicResource AppFontSize}"
+                            ToolTip.Tip="Fetch from all remotes (prune)"/>
+                    <Button Content="Pull"  Command="{Binding PullCommand}"
+                            FontSize="{DynamicResource AppFontSize}"
+                            ToolTip.Tip="Pull from upstream"/>
+                    <Button Content="Push"  Command="{Binding PushCommand}"
+                            FontSize="{DynamicResource AppFontSize}"
+                            ToolTip.Tip="Push to remote"/>
+                </StackPanel>
+
+                <!-- Settings area (right side) -->
+                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="8" Margin="8,4">
+                    <TextBlock Text="Theme:" Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontSize="{DynamicResource AppFontSize}"
+                               VerticalAlignment="Center"/>
+                    <ComboBox ItemsSource="{Binding AvailableThemes}"
+                              SelectedItem="{Binding SelectedTheme}"
+                              FontSize="{DynamicResource AppFontSize}"
+                              Width="120" VerticalAlignment="Center"/>
+                    <Separator Width="1" Background="{DynamicResource ThemeBorderColor}" Margin="0,4"/>
+                    <TextBlock Text="Font:" Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontSize="{DynamicResource AppFontSize}"
+                               VerticalAlignment="Center"/>
+                    <Slider Minimum="9" Maximum="24" Value="{Binding FontSize}"
+                            Width="90" VerticalAlignment="Center"
+                            ToolTip.Tip="{Binding FontSize, StringFormat='Font size: {0:F0}'}"/>
+                    <TextBlock Text="{Binding FontSize, StringFormat='{}{0:F0}px'}"
+                               Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontSize="{DynamicResource AppFontSize}"
+                               Width="36" VerticalAlignment="Center"/>
+                    <Button Content="Save" Command="{Binding SaveSettingsCommand}"
+                            FontSize="{DynamicResource AppFontSize}"
+                            ToolTip.Tip="Save theme and font size"/>
+                </StackPanel>
+            </DockPanel>
+        </Border>
 
         <!-- ── Status bar ────────────────────────────────────────────── -->
-        <Border DockPanel.Dock="Bottom" Background="#1e1e1e" Padding="8,4">
-            <TextBlock Text="{Binding ErrorMessage}" Foreground="#cccccc" FontSize="12"/>
+        <Border DockPanel.Dock="Bottom"
+                Background="{DynamicResource ThemeStatusBarBackground}" Padding="8,4">
+            <TextBlock Text="{Binding ErrorMessage}"
+                       Foreground="{DynamicResource ThemeSecondaryText}"
+                       FontSize="{DynamicResource AppFontSizeSmall}"/>
         </Border>
 
-        <!-- ── Left navigation sidebar ──────────────────────────────── -->
-        <Border DockPanel.Dock="Left" Width="180" Background="#252526">
-            <StackPanel Margin="0,12" Spacing="2">
+        <!-- ── Left sidebar: known repos + navigation ────────────────── -->
+        <Border DockPanel.Dock="Left" Width="190"
+                Background="{DynamicResource ThemeSidebarBackground}">
+            <DockPanel>
 
-                <!-- Repository path entry -->
-                <TextBlock Text="REPOSITORY" FontSize="11" Foreground="#888"
-                           FontWeight="Bold" Margin="12,0,12,6"/>
-                <TextBox Text="{Binding RepoPath}" Watermark="Path to repository…"
-                         Margin="8,0" FontSize="12"/>
-                <Button Content="Open" Command="{Binding OpenRepositoryCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,4,8,12"/>
+                <!-- Open a new repo -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,12,0,0" Spacing="2">
+                    <TextBlock Text="OPEN REPOSITORY"
+                               FontSize="{DynamicResource AppFontSizeSmall}"
+                               Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontWeight="Bold" Margin="12,0,12,4"/>
+                    <TextBox Text="{Binding RepoPath}" Watermark="Path to repository…"
+                             Margin="8,0"
+                             FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Open" Command="{Binding OpenRepositoryCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,4,8,0"
+                            FontSize="{DynamicResource AppFontSize}"/>
 
-                <Separator Background="#3c3c3c" Margin="8,4"/>
-                <TextBlock Text="VIEWS" FontSize="11" Foreground="#888"
-                           FontWeight="Bold" Margin="12,8,12,4"/>
+                    <Separator Background="{DynamicResource ThemeBorderColor}" Margin="8,8"/>
 
-                <Button Content="Status"   Command="{Binding ShowStatusCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
-                <Button Content="Branches" Command="{Binding ShowBranchesCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
-                <Button Content="History"  Command="{Binding ShowHistoryCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
-                <Button Content="Tags"     Command="{Binding ShowTagsCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
-                <Button Content="Remotes"  Command="{Binding ShowRemotesCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
-                <Button Content="Stash"    Command="{Binding ShowStashCommand}"
-                        HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"/>
-            </StackPanel>
+                    <!-- Saved repositories -->
+                    <TextBlock Text="SAVED REPOSITORIES"
+                               FontSize="{DynamicResource AppFontSizeSmall}"
+                               Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontWeight="Bold" Margin="12,0,12,4"/>
+                    <ListBox ItemsSource="{Binding KnownRepositories}"
+                             Background="Transparent" Padding="4,0"
+                             MaxHeight="160">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <Button Content="{Binding Name}"
+                                        Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).AddRepositoryCommand}"
+                                        CommandParameter="{Binding Path}"
+                                        HorizontalAlignment="Stretch"
+                                        HorizontalContentAlignment="Left"
+                                        Padding="4,2"
+                                        FontSize="{DynamicResource AppFontSize}"
+                                        ToolTip.Tip="{Binding Path}"
+                                        Classes="nav"/>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+
+                    <Separator Background="{DynamicResource ThemeBorderColor}" Margin="8,8"/>
+                </StackPanel>
+
+                <!-- Navigation buttons for current tab -->
+                <StackPanel DockPanel.Dock="Top" Margin="0,0,0,8" Spacing="2">
+                    <TextBlock Text="VIEWS"
+                               FontSize="{DynamicResource AppFontSizeSmall}"
+                               Foreground="{DynamicResource ThemeSecondaryText}"
+                               FontWeight="Bold" Margin="12,0,12,4"/>
+
+                    <Button Content="Status"   Command="{Binding ShowStatusCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Files"    Command="{Binding ShowFilesCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Branches" Command="{Binding ShowBranchesCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="History"  Command="{Binding ShowHistoryCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Tags"     Command="{Binding ShowTagsCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Remotes"  Command="{Binding ShowRemotesCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                    <Button Content="Stash"    Command="{Binding ShowStashCommand}"
+                            HorizontalAlignment="Stretch" Margin="8,2" Classes="nav"
+                            FontSize="{DynamicResource AppFontSize}"/>
+                </StackPanel>
+
+            </DockPanel>
         </Border>
 
-        <!-- ── Main content area — swaps view based on CurrentView ──── -->
-        <ContentControl Content="{Binding CurrentView}">
-            <ContentControl.DataTemplates>
+        <!-- ── Multi-repository tab control ─────────────────────────── -->
+        <TabControl ItemsSource="{Binding Tabs}"
+                    SelectedItem="{Binding SelectedTab}"
+                    Background="{DynamicResource ThemeContentBackground}">
 
-                <!-- Status view -->
-                <DataTemplate DataType="vm:StatusViewModel">
-                    <views:StatusView/>
+            <TabControl.ItemTemplate>
+                <DataTemplate x:DataType="vm:RepositoryTabViewModel">
+                    <StackPanel Orientation="Horizontal" Spacing="6">
+                        <TextBlock Text="{Binding Name}"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   VerticalAlignment="Center"/>
+                        <Button Content="✕"
+                                Command="{Binding $parent[Window].((vm:MainWindowViewModel)DataContext).CloseTabCommand}"
+                                CommandParameter="{Binding}"
+                                Padding="4,0" Margin="2,0,0,0"
+                                FontSize="{DynamicResource AppFontSizeSmall}"
+                                ToolTip.Tip="Close tab"/>
+                    </StackPanel>
                 </DataTemplate>
+            </TabControl.ItemTemplate>
 
-                <!-- Branches view -->
-                <DataTemplate DataType="vm:BranchesViewModel">
-                    <views:BranchesView/>
+            <TabControl.ContentTemplate>
+                <DataTemplate x:DataType="vm:RepositoryTabViewModel">
+                    <!-- Per-tab view area -->
+                    <ContentControl Content="{Binding CurrentView}">
+                        <ContentControl.DataTemplates>
+
+                            <DataTemplate DataType="vm:StatusViewModel">
+                                <views:StatusView/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:FilesViewModel">
+                                <views:FilesView/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:BranchesViewModel">
+                                <views:BranchesView/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:HistoryViewModel">
+                                <views:HistoryView/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:TagsViewModel">
+                                <views:TagsView/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:RemotesViewModel">
+                                <views:RemotesView/>
+                            </DataTemplate>
+
+                            <DataTemplate DataType="vm:StashViewModel">
+                                <views:StashView/>
+                            </DataTemplate>
+
+                        </ContentControl.DataTemplates>
+                    </ContentControl>
                 </DataTemplate>
+            </TabControl.ContentTemplate>
 
-                <!-- History view -->
-                <DataTemplate DataType="vm:HistoryViewModel">
-                    <views:HistoryView/>
-                </DataTemplate>
-
-                <!-- Tags view -->
-                <DataTemplate DataType="vm:TagsViewModel">
-                    <views:TagsView/>
-                </DataTemplate>
-
-                <!-- Remotes view -->
-                <DataTemplate DataType="vm:RemotesViewModel">
-                    <views:RemotesView/>
-                </DataTemplate>
-
-                <!-- Stash view -->
-                <DataTemplate DataType="vm:StashViewModel">
-                    <views:StashView/>
-                </DataTemplate>
-
-            </ContentControl.DataTemplates>
-        </ContentControl>
+        </TabControl>
 
     </DockPanel>
 </Window>

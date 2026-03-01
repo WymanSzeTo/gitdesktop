@@ -1,0 +1,48 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:GitDesktop.App.ViewModels"
+             x:Class="GitDesktop.App.Views.FilesView"
+             x:DataType="vm:FilesViewModel">
+
+    <Grid RowDefinitions="Auto,Auto,*">
+
+        <!-- Toolbar -->
+        <Border Grid.Row="0" Background="{DynamicResource ThemePanelBackground}" Padding="12,8">
+            <StackPanel Orientation="Horizontal" Spacing="8">
+                <TextBlock Text="Repository Files" FontWeight="Bold"
+                           FontSize="{DynamicResource AppFontSizeLarge}"
+                           Foreground="{DynamicResource ThemePrimaryText}"
+                           VerticalAlignment="Center"/>
+                <TextBlock Text="{Binding FilteredFiles.Count, StringFormat='({0} files)'}"
+                           Foreground="{DynamicResource ThemeSecondaryText}"
+                           VerticalAlignment="Center"/>
+                <Button Content="↻ Refresh" Command="{Binding RefreshCommand}"
+                        FontSize="{DynamicResource AppFontSize}"
+                        Margin="8,0,0,0"/>
+            </StackPanel>
+        </Border>
+
+        <!-- Filter -->
+        <Border Grid.Row="1" Background="{DynamicResource ThemeContentBackground}" Padding="8,4">
+            <TextBox Text="{Binding FilterText}"
+                     Watermark="Filter files…"
+                     FontSize="{DynamicResource AppFontSize}"/>
+        </Border>
+
+        <!-- File list -->
+        <ListBox Grid.Row="2"
+                 ItemsSource="{Binding FilteredFiles}"
+                 Background="{DynamicResource ThemeContentBackground}">
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <TextBlock Text="{Binding}"
+                               FontFamily="Cascadia Code,Consolas,monospace"
+                               FontSize="{DynamicResource AppFontSize}"
+                               Foreground="{DynamicResource ThemePrimaryText}"
+                               Margin="4,2"/>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+
+    </Grid>
+</UserControl>

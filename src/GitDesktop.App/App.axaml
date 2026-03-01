@@ -7,4 +7,44 @@
     <Application.Styles>
         <FluentTheme />
     </Application.Styles>
+
+    <!-- Default Dark theme resources and font sizes.
+         Values are overwritten at runtime by ThemeManager.ApplyTheme()
+         and MainWindowViewModel.ApplyFontSize(). -->
+    <Application.Resources>
+        <!-- Font sizes -->
+        <x:Double x:Key="AppFontSize">13</x:Double>
+        <x:Double x:Key="AppFontSizeLarge">15</x:Double>
+        <x:Double x:Key="AppFontSizeSmall">11</x:Double>
+        <x:Double x:Key="AppFontSizeHeading">17</x:Double>
+
+        <!-- Backgrounds -->
+        <SolidColorBrush x:Key="ThemeWindowBackground"    Color="#1e1e1e"/>
+        <SolidColorBrush x:Key="ThemeSidebarBackground"   Color="#252526"/>
+        <SolidColorBrush x:Key="ThemePanelBackground"     Color="#252526"/>
+        <SolidColorBrush x:Key="ThemeContentBackground"   Color="#1e1e1e"/>
+        <SolidColorBrush x:Key="ThemeToolbarBackground"   Color="#2d2d2d"/>
+        <SolidColorBrush x:Key="ThemeStatusBarBackground" Color="#1e1e1e"/>
+
+        <!-- Text -->
+        <SolidColorBrush x:Key="ThemePrimaryText"   Color="#d4d4d4"/>
+        <SolidColorBrush x:Key="ThemeSecondaryText" Color="#888888"/>
+        <SolidColorBrush x:Key="ThemeAccentColor"   Color="#569cd6"/>
+        <SolidColorBrush x:Key="ThemeBranchColor"   Color="#4ec9b0"/>
+
+        <!-- Diff colours -->
+        <SolidColorBrush x:Key="ThemeAddedBackground"       Color="#1a3a1a"/>
+        <SolidColorBrush x:Key="ThemeAddedForeground"       Color="#b5e7a0"/>
+        <SolidColorBrush x:Key="ThemeRemovedBackground"     Color="#3a1a1a"/>
+        <SolidColorBrush x:Key="ThemeRemovedForeground"     Color="#f48771"/>
+        <SolidColorBrush x:Key="ThemeHunkBackground"        Color="#1a2a3a"/>
+        <SolidColorBrush x:Key="ThemeHunkForeground"        Color="#9cdcfe"/>
+        <SolidColorBrush x:Key="ThemeDiffContextForeground" Color="#888888"/>
+
+        <!-- Controls -->
+        <SolidColorBrush x:Key="ThemeButtonBackground"  Color="#3c3c3c"/>
+        <SolidColorBrush x:Key="ThemeButtonForeground"  Color="#d4d4d4"/>
+        <SolidColorBrush x:Key="ThemeBorderColor"       Color="#3c3c3c"/>
+    </Application.Resources>
+
 </Application>

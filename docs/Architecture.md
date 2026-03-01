@@ -104,21 +104,30 @@ gitdesktop/
 │   │   └── GitDesktopClient.cs  (composition root for all services)
 │   ├── GitDesktop.App/
 │   │   ├── Program.cs           (Avalonia UI entry-point)
-│   │   ├── App.axaml / App.axaml.cs
+│   │   ├── App.axaml / App.axaml.cs   (theme resources + startup)
+│   │   ├── Models/
+│   │   │   └── AppConfig.cs           (AppConfig, RepositoryEntry)
+│   │   ├── Services/
+│   │   │   ├── AppConfigService.cs    (JSON config load/save)
+│   │   │   └── ThemeManager.cs        (5 colour themes + apply)
 │   │   ├── ViewModels/
 │   │   │   ├── ViewModelBase.cs
-│   │   │   ├── MainWindowViewModel.cs
-│   │   │   ├── StatusViewModel.cs
+│   │   │   ├── MainWindowViewModel.cs (tab management, settings)
+│   │   │   ├── RepositoryTabViewModel.cs (per-repo tab state)
+│   │   │   ├── StatusViewModel.cs     (+ diff loading)
+│   │   │   ├── DiffLineViewModel.cs   (diff line + colour keys)
+│   │   │   ├── FilesViewModel.cs      (repository file list)
 │   │   │   ├── BranchesViewModel.cs
 │   │   │   ├── HistoryViewModel.cs
 │   │   │   ├── TagsViewModel.cs
 │   │   │   ├── RemotesViewModel.cs
 │   │   │   ├── StashViewModel.cs
 │   │   │   ├── AsyncRelayCommand.cs
-│   │   │   └── RelayCommand.cs
+│   │   │   └── RelayCommand.cs        (+ RelayCommand<T>)
 │   │   └── Views/
 │   │       ├── MainWindow.axaml / MainWindow.axaml.cs
-│   │       ├── StatusView.axaml / StatusView.axaml.cs
+│   │       ├── StatusView.axaml / StatusView.axaml.cs  (+ diff panel)
+│   │       ├── FilesView.axaml / FilesView.axaml.cs
 │   │       ├── BranchesView.axaml / BranchesView.axaml.cs
 │   │       ├── HistoryView.axaml / HistoryView.axaml.cs
 │   │       ├── TagsView.axaml / TagsView.axaml.cs
@@ -208,32 +217,45 @@ in model classes beyond computed read-only properties derived from existing data
 **`GitDesktop.App`** — the cross-platform Avalonia UI desktop application.  It follows the MVVM
 pattern:
 
-* **`App`** — Avalonia application class; applies the Fluent theme and creates `MainWindow`.
+* **`App`** — Avalonia application class; applies the Fluent theme, sets default DynamicResource
+  colour and font-size entries, and loads the stored theme from `AppConfigService` on startup.
+* **`AppConfigService`** — loads and saves `AppConfig` as JSON to
+  `%APPDATA%\GitDesktop\config.json` (Windows) or `~/.config/GitDesktop/config.json`
+  (Linux / macOS). Stores the list of known repositories, the active theme name, and font size.
+* **`AppConfig` / `RepositoryEntry`** — the config model classes.
+* **`ThemeManager`** — defines five colour themes (Dark, Light, Monokai, Solarized Dark, Nord)
+  and applies the chosen theme by updating `Application.Current.Resources` at runtime.
 * **`MainWindow`** — the root window.  Hosts a navigation sidebar, a top toolbar (Fetch / Pull /
-  Push), a status bar, and a `ContentControl` that swaps between the child views.
-* **`MainWindowViewModel`** — top-level ViewModel.  Manages repository open/close,
-  navigation between views (Status, Branches, History, Tags, Remotes, Stash), and
-  top-level remote operations.
-* **`StatusViewModel`** — shows staged, unstaged, and untracked files.  Exposes commands to
-  stage/unstage individual files (`StageFileCommand`, `UnstageFileCommand`), stage all
-  (`StageAllCommand`), commit (`CommitCommand`), amend (`AmendMode`), and discard changes
-  (`DiscardFileCommand`).
+  Push + theme/font-size settings), a status bar, and a `TabControl` for multiple repositories.
+* **`MainWindowViewModel`** — top-level ViewModel.  Manages the collection of repository tabs
+  (`ObservableCollection<RepositoryTabViewModel>`), opens new tabs, closes tabs, and exposes
+  theme and font-size settings. Pass-through properties (`StatusVM`, `BranchesVM`, etc.) delegate
+  to the selected tab for backward compatibility.
+* **`RepositoryTabViewModel`** — holds all per-repository state: child ViewModels (`StatusVM`,
+  `BranchesVM`, `HistoryVM`, `TagsVM`, `RemotesVM`, `StashVM`, `FilesVM`), the current view,
+  and the Git operation commands (Fetch, Pull, Push).
+* **`StatusViewModel`** — shows staged, unstaged, and untracked files.  When a file is selected
+  the diff is loaded via `HistoryService.DiffAsync` and exposed as a list of
+  `DiffLineViewModel` instances.
+* **`DiffLineViewModel`** — wraps a `DiffLine` and exposes `BackgroundKey` / `ForegroundKey`
+  DynamicResource names so the view can colour lines without converters.
+* **`FilesViewModel`** — lists all tracked files via `git ls-files` and applies an in-memory
+  filter.
 * **`BranchesViewModel`** — lists all local and remote branches.  Exposes commands to switch,
-  create, delete, rename (`RenameBranchCommand`), and merge (`MergeBranchCommand`) branches.
+  create, delete, rename, and merge branches.
 * **`HistoryViewModel`** — displays the commit log and shows the diff for the selected commit.
-  Exposes commands to cherry-pick (`CherryPickCommand`), revert (`RevertCommand`), and
-  reset to a commit (`ResetToCommitCommand`).
-* **`TagsViewModel`** — lists tags.  Exposes commands to create lightweight and annotated tags,
-  and delete tags.
+  Exposes commands to cherry-pick, revert, and reset to a commit.
+* **`TagsViewModel`** — lists tags.  Exposes commands to create and delete tags.
 * **`RemotesViewModel`** — lists configured remotes.  Exposes commands to add and remove remotes.
 * **`StashViewModel`** — lists stashes with diff preview.  Exposes commands to push, apply,
   pop, and drop stashes.
-* **`AsyncRelayCommand` / `RelayCommand`** — lightweight `ICommand` wrappers (no external MVVM
-  framework dependency).
+* **`AsyncRelayCommand` / `RelayCommand` / `RelayCommand<T>`** — lightweight `ICommand`
+  wrappers (no external MVVM framework dependency).
 
-The six view classes (`StatusView`, `BranchesView`, `HistoryView`, `TagsView`, `RemotesView`,
-`StashView`) are pure Avalonia `UserControl` XAML with no code-behind logic; all state is held
-in the ViewModels.
+The view classes (`StatusView`, `FilesView`, `BranchesView`, `HistoryView`, `TagsView`,
+`RemotesView`, `StashView`) are pure Avalonia `UserControl` XAML. All colours and font sizes
+are bound via `DynamicResource` so they respond immediately when the user switches theme or
+adjusts font size.
 
 **`GitDesktop.Cli`** — a command dispatcher that maps CLI arguments to `GitDesktopClient` calls
 and formats the output for terminal consumption.

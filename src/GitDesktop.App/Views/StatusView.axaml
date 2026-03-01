@@ -7,118 +7,216 @@
     <Grid RowDefinitions="Auto,*,Auto">
 
         <!-- Branch info header -->
-        <Border Grid.Row="0" Background="#1e1e1e" Padding="12,8">
+        <Border Grid.Row="0" Background="{DynamicResource ThemePanelBackground}" Padding="12,8">
             <StackPanel Orientation="Horizontal" Spacing="12">
-                <TextBlock Text="Branch:" Foreground="#888" VerticalAlignment="Center"/>
+                <TextBlock Text="Branch:" Foreground="{DynamicResource ThemeSecondaryText}"
+                           FontSize="{DynamicResource AppFontSize}"
+                           VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding CurrentBranch}" FontWeight="Bold"
-                           Foreground="#4ec9b0" VerticalAlignment="Center"/>
+                           FontSize="{DynamicResource AppFontSize}"
+                           Foreground="{DynamicResource ThemeBranchColor}"
+                           VerticalAlignment="Center"/>
                 <TextBlock Text="{Binding UpstreamBranch, StringFormat='↑ {0}'}"
-                           Foreground="#888" VerticalAlignment="Center"
+                           Foreground="{DynamicResource ThemeSecondaryText}"
+                           FontSize="{DynamicResource AppFontSize}"
+                           VerticalAlignment="Center"
                            IsVisible="{Binding UpstreamBranch, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                 <TextBlock Text="{Binding AheadCount, StringFormat='▲{0}'}"
-                           Foreground="#dcdcaa" VerticalAlignment="Center"
+                           Foreground="#dcdcaa" FontSize="{DynamicResource AppFontSize}"
+                           VerticalAlignment="Center"
                            IsVisible="{Binding AheadCount, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                 <TextBlock Text="{Binding BehindCount, StringFormat='▼{0}'}"
-                           Foreground="#f48771" VerticalAlignment="Center"
+                           Foreground="{DynamicResource ThemeRemovedForeground}"
+                           FontSize="{DynamicResource AppFontSize}"
+                           VerticalAlignment="Center"
                            IsVisible="{Binding BehindCount, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                 <Button Content="↻ Refresh" Command="{Binding RefreshCommand}"
+                        FontSize="{DynamicResource AppFontSize}"
                         HorizontalAlignment="Right" Margin="16,0,0,0"/>
             </StackPanel>
         </Border>
 
-        <!-- Three-panel file lists -->
-        <Grid Grid.Row="1" ColumnDefinitions="*,*,*">
+        <!-- Main content: file lists (top) + diff panel (bottom) -->
+        <Grid Grid.Row="1" RowDefinitions="*,Auto,200">
 
-            <!-- Staged files -->
-            <DockPanel Grid.Column="0" Margin="8">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                    <TextBlock Text="Staged" FontWeight="Bold" Foreground="#4ec9b0" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding StagedFiles.Count, StringFormat='({0})'}" Foreground="#888"/>
-                </StackPanel>
-                <ListBox ItemsSource="{Binding StagedFiles}" Background="#1e1e1e">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel>
-                                <Button DockPanel.Dock="Right" Content="−"
-                                        Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).UnstageFileCommand}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="Unstage" Padding="6,2" Margin="4,0,0,0"/>
-                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
+            <!-- Three-panel file lists -->
+            <Grid Grid.Row="0" ColumnDefinitions="*,*,*">
 
-            <!-- Unstaged files -->
-            <DockPanel Grid.Column="1" Margin="8">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                    <TextBlock Text="Unstaged" FontWeight="Bold" Foreground="#dcdcaa" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding UnstagedFiles.Count, StringFormat='({0})'}" Foreground="#888"/>
-                    <Button Content="Stage all" Command="{Binding StageAllCommand}"
-                            Padding="8,2" Margin="8,0,0,0"/>
-                </StackPanel>
-                <ListBox ItemsSource="{Binding UnstagedFiles}" Background="#1e1e1e">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel>
-                                <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
-                                    <Button Content="+"
+                <!-- Staged files -->
+                <DockPanel Grid.Column="0" Margin="8">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                        <TextBlock Text="Staged" FontWeight="Bold"
+                                   Foreground="{DynamicResource ThemeBranchColor}"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding StagedFiles.Count, StringFormat='({0})'}"
+                                   Foreground="{DynamicResource ThemeSecondaryText}"
+                                   FontSize="{DynamicResource AppFontSize}"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding StagedFiles}"
+                             SelectedItem="{Binding SelectedFile}"
+                             Background="{DynamicResource ThemeContentBackground}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="−"
+                                            Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).UnstageFileCommand}"
+                                            CommandParameter="{Binding}"
+                                            FontSize="{DynamicResource AppFontSize}"
+                                            ToolTip.Tip="Unstage" Padding="6,2" Margin="4,0,0,0"/>
+                                    <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                               FontSize="{DynamicResource AppFontSize}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+
+                <!-- Unstaged files -->
+                <DockPanel Grid.Column="1" Margin="8">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                        <TextBlock Text="Unstaged" FontWeight="Bold"
+                                   Foreground="#dcdcaa"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding UnstagedFiles.Count, StringFormat='({0})'}"
+                                   Foreground="{DynamicResource ThemeSecondaryText}"
+                                   FontSize="{DynamicResource AppFontSize}"/>
+                        <Button Content="Stage all" Command="{Binding StageAllCommand}"
+                                FontSize="{DynamicResource AppFontSize}"
+                                Padding="8,2" Margin="8,0,0,0"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding UnstagedFiles}"
+                             SelectedItem="{Binding SelectedFile}"
+                             Background="{DynamicResource ThemeContentBackground}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <StackPanel DockPanel.Dock="Right" Orientation="Horizontal" Spacing="2">
+                                        <Button Content="+"
+                                                Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).StageFileCommand}"
+                                                CommandParameter="{Binding}"
+                                                FontSize="{DynamicResource AppFontSize}"
+                                                ToolTip.Tip="Stage" Padding="6,2"/>
+                                        <Button Content="✕"
+                                                Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).DiscardFileCommand}"
+                                                CommandParameter="{Binding}"
+                                                FontSize="{DynamicResource AppFontSize}"
+                                                ToolTip.Tip="Discard changes"
+                                                Foreground="{DynamicResource ThemeRemovedForeground}"
+                                                Padding="6,2"/>
+                                    </StackPanel>
+                                    <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                               FontSize="{DynamicResource AppFontSize}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
+
+                <!-- Untracked files -->
+                <DockPanel Grid.Column="2" Margin="8">
+                    <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
+                        <TextBlock Text="Untracked" FontWeight="Bold"
+                                   Foreground="{DynamicResource ThemeSecondaryText}"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding UntrackedFiles.Count, StringFormat='({0})'}"
+                                   Foreground="{DynamicResource ThemeSecondaryText}"
+                                   FontSize="{DynamicResource AppFontSize}"/>
+                    </StackPanel>
+                    <ListBox ItemsSource="{Binding UntrackedFiles}"
+                             SelectedItem="{Binding SelectedFile}"
+                             Background="{DynamicResource ThemeContentBackground}">
+                        <ListBox.ItemTemplate>
+                            <DataTemplate>
+                                <DockPanel>
+                                    <Button DockPanel.Dock="Right" Content="+"
                                             Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).StageFileCommand}"
                                             CommandParameter="{Binding}"
-                                            ToolTip.Tip="Stage" Padding="6,2"/>
-                                    <Button Content="✕"
-                                            Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).DiscardFileCommand}"
-                                            CommandParameter="{Binding}"
-                                            ToolTip.Tip="Discard changes" Foreground="#f48771" Padding="6,2"/>
-                                </StackPanel>
-                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
+                                            FontSize="{DynamicResource AppFontSize}"
+                                            ToolTip.Tip="Stage" Padding="6,2" Margin="4,0,0,0"/>
+                                    <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
+                                               FontSize="{DynamicResource AppFontSize}"
+                                               TextTrimming="CharacterEllipsis"/>
+                                </DockPanel>
+                            </DataTemplate>
+                        </ListBox.ItemTemplate>
+                    </ListBox>
+                </DockPanel>
 
-            <!-- Untracked files -->
-            <DockPanel Grid.Column="2" Margin="8">
-                <StackPanel DockPanel.Dock="Top" Orientation="Horizontal" Spacing="8" Margin="0,0,0,4">
-                    <TextBlock Text="Untracked" FontWeight="Bold" Foreground="#888" VerticalAlignment="Center"/>
-                    <TextBlock Text="{Binding UntrackedFiles.Count, StringFormat='({0})'}" Foreground="#888"/>
-                </StackPanel>
-                <ListBox ItemsSource="{Binding UntrackedFiles}" Background="#1e1e1e">
-                    <ListBox.ItemTemplate>
-                        <DataTemplate>
-                            <DockPanel>
-                                <Button DockPanel.Dock="Right" Content="+"
-                                        Command="{Binding $parent[UserControl].((vm:StatusViewModel)DataContext).StageFileCommand}"
-                                        CommandParameter="{Binding}"
-                                        ToolTip.Tip="Stage" Padding="6,2" Margin="4,0,0,0"/>
-                                <TextBlock Text="{Binding Path}" VerticalAlignment="Center"
-                                           TextTrimming="CharacterEllipsis"/>
-                            </DockPanel>
-                        </DataTemplate>
-                    </ListBox.ItemTemplate>
-                </ListBox>
-            </DockPanel>
+            </Grid>
+
+            <!-- Diff panel splitter -->
+            <GridSplitter Grid.Row="1" Height="4"
+                          Background="{DynamicResource ThemeBorderColor}"
+                          HorizontalAlignment="Stretch"/>
+
+            <!-- Diff viewer: syntax-highlighted lines for selected file -->
+            <Grid Grid.Row="2" RowDefinitions="Auto,*">
+                <Border Grid.Row="0"
+                        Background="{DynamicResource ThemePanelBackground}" Padding="8,4">
+                    <StackPanel Orientation="Horizontal" Spacing="8">
+                        <TextBlock Text="Diff:" FontWeight="Bold"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemePrimaryText}"
+                                   VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding SelectedFile.Path}"
+                                   FontFamily="Cascadia Code,Consolas,monospace"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemeAccentColor}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <TextBlock Text="(select a file above to view its diff)"
+                                   FontSize="{DynamicResource AppFontSize}"
+                                   Foreground="{DynamicResource ThemeSecondaryText}"
+                                   VerticalAlignment="Center"
+                                   IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNull}}"/>
+                    </StackPanel>
+                </Border>
+                <ScrollViewer Grid.Row="1"
+                              Background="{DynamicResource ThemeContentBackground}"
+                              HorizontalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding DiffLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:DiffLineViewModel">
+                                <Border Background="{DynamicResource {Binding BackgroundKey}}"
+                                        Padding="0">
+                                    <TextBlock Text="{Binding Content}"
+                                               Foreground="{DynamicResource {Binding ForegroundKey}}"
+                                               FontFamily="Cascadia Code,Consolas,monospace"
+                                               FontSize="{DynamicResource AppFontSize}"
+                                               TextWrapping="NoWrap"
+                                               Margin="4,0"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </ScrollViewer>
+            </Grid>
 
         </Grid>
 
         <!-- Commit panel -->
-        <Border Grid.Row="2" Background="#252526" Padding="12,8">
+        <Border Grid.Row="2" Background="{DynamicResource ThemePanelBackground}" Padding="12,8">
             <Grid RowDefinitions="Auto,Auto,Auto">
-                <TextBlock Grid.Row="0" Text="{Binding StatusMessage}" Foreground="#888"
-                           FontSize="12" Margin="0,0,0,4"
+                <TextBlock Grid.Row="0" Text="{Binding StatusMessage}"
+                           Foreground="{DynamicResource ThemeSecondaryText}"
+                           FontSize="{DynamicResource AppFontSizeSmall}" Margin="0,0,0,4"
                            IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
                 <TextBox Grid.Row="1" Text="{Binding CommitMessage}"
                          Watermark="Commit message…" Height="60"
+                         FontSize="{DynamicResource AppFontSize}"
                          AcceptsReturn="True" TextWrapping="Wrap"/>
                 <StackPanel Grid.Row="2" Orientation="Horizontal" Spacing="8"
                             HorizontalAlignment="Right" Margin="0,6,0,0">
                     <CheckBox Content="Amend" IsChecked="{Binding AmendMode}"
+                              FontSize="{DynamicResource AppFontSize}"
                               VerticalAlignment="Center"/>
                     <Button Content="Commit staged changes"
+                            FontSize="{DynamicResource AppFontSize}"
                             Command="{Binding CommitCommand}"/>
                 </StackPanel>
             </Grid>
