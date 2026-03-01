@@ -211,7 +211,7 @@ public class MainWindowViewModelTests : IDisposable
     }
 
     [Fact]
-    public async Task KnownRepositories_PropertyChangedFiresNewReference()
+    public async Task KnownRepositories_IsStableObservableReference()
     {
         var mock = new MockGitExecutor();
         mock.EnqueueSuccess(".git\nfalse\nmain");
@@ -222,8 +222,8 @@ public class MainWindowViewModelTests : IDisposable
 
         var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
 
-        // Capture two consecutive reads of KnownRepositories to verify they are different
-        // reference objects (enabling Avalonia to detect the change in a ListBox binding).
+        // KnownRepositories should return the same ObservableCollection reference on every
+        // access so that Avalonia's ListBox can track INotifyCollectionChanged events.
         var before = vm.KnownRepositories;
 
         vm.RepoPath = "/repo-a";
@@ -231,7 +231,8 @@ public class MainWindowViewModelTests : IDisposable
 
         var after = vm.KnownRepositories;
 
-        Assert.NotSame(before, after);
+        Assert.Same(before, after);
+        Assert.Single(after);
     }
 }
 

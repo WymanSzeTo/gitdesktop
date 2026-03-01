@@ -2,6 +2,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              x:Class="GitDesktop.App.App"
              xmlns:local="using:GitDesktop.App"
+             xmlns:conv="using:GitDesktop.App.Converters"
              RequestedThemeVariant="Default">
 
     <Application.Styles>
@@ -12,6 +13,9 @@
          Values are overwritten at runtime by ThemeManager.ApplyTheme()
          and MainWindowViewModel.ApplyFontSize(). -->
     <Application.Resources>
+        <!-- Converters -->
+        <conv:ResourceKeyBrushConverter x:Key="ResourceKeyBrushConverter"/>
+
         <!-- Font sizes -->
         <x:Double x:Key="AppFontSize">13</x:Double>
         <x:Double x:Key="AppFontSizeLarge">15</x:Double>

@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GitDesktop.App.ViewModels"
+             xmlns:conv="using:GitDesktop.App.Converters"
              x:Class="GitDesktop.App.Views.StatusView"
              x:DataType="vm:StatusViewModel">
 
@@ -182,10 +183,10 @@
                     <ItemsControl ItemsSource="{Binding DiffLines}">
                         <ItemsControl.ItemTemplate>
                             <DataTemplate x:DataType="vm:DiffLineViewModel">
-                                <Border Background="{DynamicResource {Binding BackgroundKey}}"
+                                <Border Background="{Binding BackgroundKey, Converter={StaticResource ResourceKeyBrushConverter}}"
                                         Padding="0">
                                     <TextBlock Text="{Binding Content}"
-                                               Foreground="{DynamicResource {Binding ForegroundKey}}"
+                                               Foreground="{Binding ForegroundKey, Converter={StaticResource ResourceKeyBrushConverter}}"
                                                FontFamily="Cascadia Code,Consolas,monospace"
                                                FontSize="{DynamicResource AppFontSize}"
                                                TextWrapping="NoWrap"
