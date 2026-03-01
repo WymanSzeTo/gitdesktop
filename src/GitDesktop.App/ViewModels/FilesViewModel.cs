@@ -112,7 +112,9 @@ public sealed class FilesViewModel : ViewModelBase
         IsContentLoading = true;
         try
         {
-            var result = await _client.Advanced.RunRawAsync(_repoPath, $"show HEAD:{filePath}");
+            // Quote the path to handle spaces and special characters safely.
+            var safePath = filePath.Replace("\"", "\\\"");
+            var result = await _client.Advanced.RunRawAsync(_repoPath, $"show HEAD:\"{safePath}\"");
             if (!result.Success || string.IsNullOrEmpty(result.Output)) return;
 
             foreach (var line in result.Output.Split('\n'))

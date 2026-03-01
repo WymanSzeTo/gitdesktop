@@ -122,11 +122,8 @@ public class MainWindowViewModelTests : IDisposable
 
         Assert.Equal(2, vm.KnownRepositories.Count);
 
-        // Remove via the config service (same underlying logic used by the command).
         var entryToRemove = vm.KnownRepositories[0];
-        await svc.RemoveRepositoryAsync(cfg, entryToRemove.Path);
-        // Reload to reflect the change.
-        await vm.LoadConfigAsync();
+        await vm.RemoveSavedRepositoryAsync(entryToRemove);
 
         Assert.Single(vm.KnownRepositories);
         Assert.Equal("repo-b", vm.KnownRepositories[0].Name);

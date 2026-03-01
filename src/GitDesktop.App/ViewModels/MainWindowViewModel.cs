@@ -319,7 +319,11 @@ public sealed class MainWindowViewModel : ViewModelBase
         await tab.LoadAsync();
     }
 
-    private async Task RemoveSavedRepositoryAsync(RepositoryEntry? entry)
+    /// <summary>
+    /// Removes a saved repository entry by path. Exposed as <see langword="public"/>
+    /// so callers (e.g. tests) can await it directly.
+    /// </summary>
+    public async Task RemoveSavedRepositoryAsync(RepositoryEntry? entry)
     {
         if (entry == null) return;
         await _configService.RemoveRepositoryAsync(_config, entry.Path);
