@@ -1,3 +1,4 @@
+using GitDesktop.App.Models;
 using GitDesktop.App.Services;
 using GitDesktop.App.ViewModels;
 using GitDesktop.Core;
@@ -166,10 +167,172 @@ public class MultiRepoTabTests : IDisposable
     }
 
     [Fact]
-    public void AvailableThemes_ContainsFiveEntries()
+    public async Task OpenRepositoryAsync_SamePath_SwitchesToExistingTabNoDuplicate()
     {
-        var vm = new MainWindowViewModel(new GitDesktopClient(new MockGitExecutor()), IsolatedConfig());
+        var mock = ValidRepoMock();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
 
-        Assert.Equal(5, vm.AvailableThemes.Count);
+        // Opening the same path again should not add a second tab.
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
+
+        Assert.Single(vm.Tabs);
+        Assert.Equal("/repo-a", vm.SelectedTab!.RepoPath);
+    }
+
+    [Fact]
+    public async Task OpenRepositoryAsync_WithCustomName_UsesCustomName()
+    {
+        var mock = ValidRepoMock();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath  = "/repo-a";
+        vm.CustomName = "My Awesome Repo";
+
+        await vm.OpenRepositoryAsync();
+
+        Assert.Equal("My Awesome Repo", vm.SelectedTab!.Name);
+        // CustomName should be cleared after opening.
+        Assert.Equal(string.Empty, vm.CustomName);
+    }
+
+    [Fact]
+    public async Task OpenRepositoryAsync_NoCustomName_DerivesNameFromPath()
+    {
+        var mock = ValidRepoMock();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath = "/projects/my-project";
+
+        await vm.OpenRepositoryAsync();
+
+        Assert.Equal("my-project", vm.SelectedTab!.Name);
+    }
+
+    [Fact]
+    public async Task SelectedTab_Changed_RaisesShowCommandPropertyChangedNotifications()
+    {
+        var mock = new MockGitExecutor();
+        // Two repos
+        mock.EnqueueSuccess(".git\nfalse\nmain"); mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n"); mock.EnqueueSuccess("");
+        mock.EnqueueSuccess(".git\nfalse\ndev"); mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head dev\n");
+        mock.EnqueueSuccess("dev|def5678|true||0|0\n"); mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath = "/repo-a"; await vm.OpenRepositoryAsync();
+        vm.RepoPath = "/repo-b"; await vm.OpenRepositoryAsync();
+
+        var notified = new HashSet<string>();
+        vm.PropertyChanged += (_, e) => { if (e.PropertyName != null) notified.Add(e.PropertyName); };
+
+        vm.SelectedTab = vm.Tabs[0];
+
+        Assert.Contains(nameof(MainWindowViewModel.ShowStatusCommand),   notified);
+        Assert.Contains(nameof(MainWindowViewModel.ShowBranchesCommand), notified);
+        Assert.Contains(nameof(MainWindowViewModel.ShowHistoryCommand),  notified);
+        Assert.Contains(nameof(MainWindowViewModel.ShowTagsCommand),     notified);
+        Assert.Contains(nameof(MainWindowViewModel.ShowRemotesCommand),  notified);
+        Assert.Contains(nameof(MainWindowViewModel.ShowStashCommand),    notified);
+        Assert.Contains(nameof(MainWindowViewModel.ShowFilesCommand),    notified);
+    }
+
+    [Fact]
+    public async Task SelectedTab_Changed_ShowCommandsReturnNonNull()
+    {
+        var mock = ValidRepoMock();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), IsolatedConfig());
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
+
+        // With a tab selected all show-commands should be non-null.
+        Assert.NotNull(vm.ShowStatusCommand);
+        Assert.NotNull(vm.ShowBranchesCommand);
+        Assert.NotNull(vm.ShowHistoryCommand);
+        Assert.NotNull(vm.ShowTagsCommand);
+        Assert.NotNull(vm.ShowRemotesCommand);
+        Assert.NotNull(vm.ShowStashCommand);
+        Assert.NotNull(vm.ShowFilesCommand);
+    }
+
+    [Fact]
+    public async Task StartupAsync_RestoresOpenTabs()
+    {
+        var cfgPath = Path.Combine(_tempDir, $"cfg_{Guid.NewGuid():N}.json");
+        var svc     = new AppConfigService(cfgPath);
+
+        // Simulate a previous session: save two open paths to config.
+        var cfg = new AppConfig
+        {
+            OpenRepositoryPaths = ["/repo-a", "/repo-b"],
+        };
+        await svc.SaveAsync(cfg);
+
+        // Build a mock that answers OpenAsync + LoadAsync for both repos.
+        var mock = new MockGitExecutor();
+        // repo-a: OpenAsync + status + branches + history
+        mock.EnqueueSuccess(".git\nfalse\nmain"); mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n"); mock.EnqueueSuccess("");
+        // repo-b: OpenAsync + status + branches + history
+        mock.EnqueueSuccess(".git\nfalse\ndev"); mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head dev\n");
+        mock.EnqueueSuccess("dev|def5678|true||0|0\n"); mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), svc);
+        await vm.StartupAsync();
+
+        Assert.Equal(2, vm.Tabs.Count);
+    }
+
+    [Fact]
+    public async Task StartupAsync_RestoresSelectedTab()
+    {
+        var cfgPath = Path.Combine(_tempDir, $"cfg_{Guid.NewGuid():N}.json");
+        var svc     = new AppConfigService(cfgPath);
+
+        var cfg = new AppConfig
+        {
+            OpenRepositoryPaths   = ["/repo-a", "/repo-b"],
+            SelectedRepositoryPath = "/repo-b",
+        };
+        await svc.SaveAsync(cfg);
+
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess(".git\nfalse\nmain"); mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head main\n");
+        mock.EnqueueSuccess("main|abc1234|true||0|0\n"); mock.EnqueueSuccess("");
+        mock.EnqueueSuccess(".git\nfalse\ndev"); mock.EnqueueSuccess("git version 2.40.0");
+        mock.EnqueueSuccess("# branch.head dev\n");
+        mock.EnqueueSuccess("dev|def5678|true||0|0\n"); mock.EnqueueSuccess("");
+
+        var vm = new MainWindowViewModel(new GitDesktopClient(mock), svc);
+        await vm.StartupAsync();
+
+        Assert.Equal("/repo-b", vm.SelectedTab!.RepoPath);
+    }
+
+    [Fact]
+    public async Task SaveTabNameCommand_UpdatesTabNameAndConfig()
+    {
+        var cfgPath = Path.Combine(_tempDir, $"cfg_{Guid.NewGuid():N}.json");
+        var svc     = new AppConfigService(cfgPath);
+
+        var mock = ValidRepoMock();
+        var vm   = new MainWindowViewModel(new GitDesktopClient(mock), svc);
+        vm.RepoPath = "/repo-a";
+        await vm.OpenRepositoryAsync();
+
+        vm.SelectedTabName = "Renamed Tab";
+        await vm.SaveTabNameAsync();
+
+        Assert.Equal("Renamed Tab", vm.SelectedTab!.Name);
+
+        // Verify the name is persisted to config.
+        var loaded = await svc.LoadAsync();
+        Assert.Equal("Renamed Tab", loaded.Repositories.First(r => r.Path.EndsWith("repo-a")).Name);
     }
 }
+

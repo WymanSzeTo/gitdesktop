@@ -17,5 +17,8 @@ public sealed partial class MainWindow : Window
     {
         InitializeComponent();
         DataContext = viewModel;
+
+        // Restore the previous session (config, themes, open tabs) once the window is shown.
+        Opened += async (_, _) => await viewModel.StartupAsync();
     }
 }

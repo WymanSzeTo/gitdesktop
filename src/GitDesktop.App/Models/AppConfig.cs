@@ -25,4 +25,16 @@ public sealed class AppConfig
 
     /// <summary>Gets or sets the base font size used throughout the UI.</summary>
     public double FontSize { get; set; } = 13.0;
+
+    /// <summary>
+    /// Gets or sets the list of repository paths that were open in the last session.
+    /// Used to restore the previous session on startup.
+    /// </summary>
+    public List<string> OpenRepositoryPaths { get; set; } = [];
+
+    /// <summary>
+    /// Gets or sets the path of the repository tab that was active when the app was last closed.
+    /// Used to restore the selected tab on startup.
+    /// </summary>
+    public string? SelectedRepositoryPath { get; set; }
 }

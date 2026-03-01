@@ -106,4 +106,28 @@ public sealed class AppConfigService
         config.Repositories.RemoveAll(r => Path.GetFullPath(r.Path) == normalised);
         await SaveAsync(config);
     }
+
+    /// <summary>
+    /// Updates the display name of an existing repository entry and saves.
+    /// If no entry exists for <paramref name="repoPath"/>, this is a no-op.
+    /// </summary>
+    public async Task UpdateRepositoryNameAsync(AppConfig config, string repoPath, string newName)
+    {
+        var normalised = Path.GetFullPath(repoPath);
+        var entry = config.Repositories.FirstOrDefault(r => Path.GetFullPath(r.Path) == normalised);
+        if (entry is not null)
+            entry.Name = newName;
+        await SaveAsync(config);
+    }
+
+    /// <summary>
+    /// Persists the current set of open repository paths and the active path to disk.
+    /// Called whenever the open-tab state changes so the session can be restored on next launch.
+    /// </summary>
+    public async Task UpdateOpenSessionAsync(AppConfig config, IEnumerable<string> openPaths, string? selectedPath)
+    {
+        config.OpenRepositoryPaths   = openPaths.ToList();
+        config.SelectedRepositoryPath = selectedPath;
+        await SaveAsync(config);
+    }
 }
