@@ -32,6 +32,9 @@ public sealed class ThemeColors
     public Color ButtonBackground  { get; init; }
     public Color ButtonForeground  { get; init; }
     public Color BorderColor       { get; init; }
+    public Color SyntaxComment     { get; init; }
+    public Color SyntaxKeyword     { get; init; }
+    public Color SyntaxString      { get; init; }
 }
 
 /// <summary>
@@ -80,6 +83,9 @@ public static class ThemeManager
         ButtonBackground  = Color.Parse("#3c3c3c"),
         ButtonForeground  = Color.Parse("#d4d4d4"),
         BorderColor       = Color.Parse("#3c3c3c"),
+        SyntaxComment     = Color.Parse("#6A9955"),
+        SyntaxKeyword     = Color.Parse("#C586C0"),
+        SyntaxString      = Color.Parse("#CE9178"),
     };
 
     // ── 2 · Light ────────────────────────────────────────────────────────────
@@ -108,6 +114,9 @@ public static class ThemeManager
         ButtonBackground  = Color.Parse("#dddddd"),
         ButtonForeground  = Color.Parse("#1e1e1e"),
         BorderColor       = Color.Parse("#cccccc"),
+        SyntaxComment     = Color.Parse("#008000"),
+        SyntaxKeyword     = Color.Parse("#0000FF"),
+        SyntaxString      = Color.Parse("#A31515"),
     };
 
     // ── 3 · Monokai ───────────────────────────────────────────────────────────
@@ -136,6 +145,9 @@ public static class ThemeManager
         ButtonBackground  = Color.Parse("#3e3d32"),
         ButtonForeground  = Color.Parse("#f8f8f2"),
         BorderColor       = Color.Parse("#49483e"),
+        SyntaxComment     = Color.Parse("#75715e"),
+        SyntaxKeyword     = Color.Parse("#f92672"),
+        SyntaxString      = Color.Parse("#e6db74"),
     };
 
     // ── 4 · Solarized Dark ───────────────────────────────────────────────────
@@ -164,6 +176,9 @@ public static class ThemeManager
         ButtonBackground  = Color.Parse("#073642"),
         ButtonForeground  = Color.Parse("#839496"),
         BorderColor       = Color.Parse("#586e75"),
+        SyntaxComment     = Color.Parse("#586e75"),
+        SyntaxKeyword     = Color.Parse("#859900"),
+        SyntaxString      = Color.Parse("#2aa198"),
     };
 
     // ── 5 · Nord ──────────────────────────────────────────────────────────────
@@ -192,6 +207,9 @@ public static class ThemeManager
         ButtonBackground  = Color.Parse("#4c566a"),
         ButtonForeground  = Color.Parse("#eceff4"),
         BorderColor       = Color.Parse("#4c566a"),
+        SyntaxComment     = Color.Parse("#616e88"),
+        SyntaxKeyword     = Color.Parse("#81a1c1"),
+        SyntaxString      = Color.Parse("#a3be8c"),
     };
 
     /// <summary>
@@ -229,5 +247,8 @@ public static class ThemeManager
         res["ThemeButtonBackground"]  = new SolidColorBrush(t.ButtonBackground);
         res["ThemeButtonForeground"]  = new SolidColorBrush(t.ButtonForeground);
         res["ThemeBorderColor"]       = new SolidColorBrush(t.BorderColor);
+        res["ThemeSyntaxComment"]     = new SolidColorBrush(t.SyntaxComment);
+        res["ThemeSyntaxKeyword"]     = new SolidColorBrush(t.SyntaxKeyword);
+        res["ThemeSyntaxString"]      = new SolidColorBrush(t.SyntaxString);
     }
 }

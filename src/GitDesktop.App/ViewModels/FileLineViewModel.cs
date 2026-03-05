@@ -18,9 +18,9 @@ public sealed class FileLineViewModel
     /// <summary>Foreground brush resource key for this line.</summary>
     public string ForegroundKey => Kind switch
     {
-        FileLineKind.Comment => "ThemeSecondaryText",
-        FileLineKind.Keyword => "ThemeAccentColor",
-        FileLineKind.String  => "ThemeAddedForeground",
+        FileLineKind.Comment => "ThemeSyntaxComment",
+        FileLineKind.Keyword => "ThemeSyntaxKeyword",
+        FileLineKind.String  => "ThemeSyntaxString",
         _                    => "ThemePrimaryText",
     };
 }

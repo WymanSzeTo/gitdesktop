@@ -1,4 +1,5 @@
 using System.Collections.ObjectModel;
+using System.Text.RegularExpressions;
 using System.Windows.Input;
 using GitDesktop.Core;
 using GitDesktop.Core.Models;
@@ -11,12 +12,17 @@ namespace GitDesktop.App.ViewModels;
 /// </summary>
 public sealed class HistoryViewModel : ViewModelBase
 {
+    private const string UnknownLanguageLabel = "Unknown";
+    private const string MixedLanguageLabel = "Mixed";
+
     private readonly GitDesktopClient _client;
     private readonly string _repoPath;
     private bool _isLoading;
     private Commit? _selectedCommit;
     private string? _selectedCommitDiff;
     private string? _statusMessage;
+    private string _detectedDiffLanguage = UnknownLanguageLabel;
+    private static readonly Regex s_diffFileRegex = new(@"^\+\+\+ b/(.+)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public HistoryViewModel(GitDesktopClient client, string repoPath)
     {
@@ -24,6 +30,7 @@ public sealed class HistoryViewModel : ViewModelBase
         _repoPath = repoPath;
 
         Commits = [];
+        SelectedCommitDiffLines = [];
 
         RefreshCommand = new AsyncRelayCommand(RefreshAsync);
         LoadDiffCommand = new AsyncRelayCommand<Commit>(LoadDiffAsync);
@@ -61,6 +68,12 @@ public sealed class HistoryViewModel : ViewModelBase
         private set => SetField(ref _selectedCommitDiff, value);
     }
 
+    public string DetectedDiffLanguage
+    {
+        get => _detectedDiffLanguage;
+        private set => SetField(ref _detectedDiffLanguage, value);
+    }
+
     /// <summary>Gets or sets a transient status message shown to the user.</summary>
     public string? StatusMessage
     {
@@ -70,6 +83,7 @@ public sealed class HistoryViewModel : ViewModelBase
 
     /// <summary>Gets the list of commits in the log.</summary>
     public ObservableCollection<Commit> Commits { get; }
+    public ObservableCollection<HistoryDiffLineViewModel> SelectedCommitDiffLines { get; }
 
     /// <summary>Command to refresh the commit log.</summary>
     public ICommand RefreshCommand { get; }
@@ -107,6 +121,60 @@ public sealed class HistoryViewModel : ViewModelBase
         if (commit == null) return;
         var result = await _client.History.ShowAsync(_repoPath, commit.Hash);
         SelectedCommitDiff = result.Success ? result.Output : result.Error;
+        BuildDiffLines(result.Success ? result.Output : null);
+    }
+
+    private void BuildDiffLines(string? diffText)
+    {
+        SelectedCommitDiffLines.Clear();
+        DetectedDiffLanguage = UnknownLanguageLabel;
+        if (string.IsNullOrWhiteSpace(diffText))
+            return;
+
+        var currentLanguage = SourceLanguage.Unknown;
+        var encounteredLanguages = new HashSet<SourceLanguage>();
+        foreach (var rawLine in diffText.Split('\n'))
+        {
+            var lineType = rawLine.Length == 0
+                ? DiffLineType.Context
+                : rawLine[0] switch
+                {
+                    '+' when rawLine.StartsWith("+++") => DiffLineType.Header,
+                    '-' when rawLine.StartsWith("---") => DiffLineType.Header,
+                    '+' => DiffLineType.Added,
+                    '-' => DiffLineType.Removed,
+                    '@' => DiffLineType.Hunk,
+                    'd' when rawLine.StartsWith("diff ") => DiffLineType.Header,
+                    _ => DiffLineType.Context,
+                };
+
+            if (lineType == DiffLineType.Header)
+            {
+                var match = s_diffFileRegex.Match(rawLine);
+                if (match.Success)
+                {
+                    currentLanguage = SourceSyntaxClassifier.DetectLanguage(match.Groups[1].Value);
+                    if (currentLanguage != SourceLanguage.Unknown)
+                        encounteredLanguages.Add(currentLanguage);
+                }
+            }
+
+            var contentForSyntax = lineType is DiffLineType.Added or DiffLineType.Removed
+                ? rawLine[1..]
+                : rawLine;
+            var syntaxKind = lineType is DiffLineType.Context or DiffLineType.Added or DiffLineType.Removed
+                ? SourceSyntaxClassifier.ClassifyLine(contentForSyntax, currentLanguage)
+                : FileLineKind.Code;
+
+            SelectedCommitDiffLines.Add(new HistoryDiffLineViewModel(rawLine, lineType, syntaxKind));
+        }
+
+        DetectedDiffLanguage = encounteredLanguages.Count switch
+        {
+            0 => UnknownLanguageLabel,
+            1 => encounteredLanguages.First().ToString(),
+            _ => MixedLanguageLabel,
+        };
     }
 
     private async Task CherryPickAsync(Commit? commit)

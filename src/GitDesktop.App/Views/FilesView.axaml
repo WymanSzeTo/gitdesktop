@@ -69,6 +69,16 @@
                                    Foreground="{DynamicResource ThemeAccentColor}"
                                    VerticalAlignment="Center"
                                    IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}"/>
+                        <Border Background="{DynamicResource ThemePanelBackground}"
+                                BorderBrush="{DynamicResource ThemeBorderColor}"
+                                BorderThickness="1"
+                                CornerRadius="4"
+                                Padding="6,1"
+                                IsVisible="{Binding SelectedFile, Converter={x:Static ObjectConverters.IsNotNull}}">
+                            <TextBlock Text="{Binding DetectedLanguage}"
+                                       Foreground="{DynamicResource ThemeSecondaryText}"
+                                       FontSize="{DynamicResource AppFontSizeSmall}"/>
+                        </Border>
                         <TextBlock Text="(select a file to view its content)"
                                    FontSize="{DynamicResource AppFontSize}"
                                    Foreground="{DynamicResource ThemeSecondaryText}"

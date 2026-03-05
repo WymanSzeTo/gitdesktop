@@ -12,12 +12,15 @@ namespace GitDesktop.App.ViewModels;
 /// </summary>
 public sealed class FilesViewModel : ViewModelBase
 {
+    private const string PlainTextLanguage = "Plain text";
+
     private readonly GitDesktopClient _client;
     private readonly string _repoPath;
     private bool _isLoading;
     private bool _isContentLoading;
     private string _filterText = string.Empty;
     private string? _selectedFile;
+    private string _detectedLanguage = PlainTextLanguage;
 
     public FilesViewModel(GitDesktopClient client, string repoPath)
     {
@@ -76,6 +79,13 @@ public sealed class FilesViewModel : ViewModelBase
     /// <summary>Gets the syntax-highlighted lines of the currently selected file.</summary>
     public ObservableCollection<FileLineViewModel> ContentLines { get; }
 
+    /// <summary>Gets the detected language for the selected file.</summary>
+    public string DetectedLanguage
+    {
+        get => _detectedLanguage;
+        private set => SetField(ref _detectedLanguage, value);
+    }
+
     /// <summary>Command to reload the file list.</summary>
     public ICommand RefreshCommand { get; }
 
@@ -110,11 +120,15 @@ public sealed class FilesViewModel : ViewModelBase
     public async Task LoadFileContentAsync(string? filePath)
     {
         ContentLines.Clear();
+        DetectedLanguage = PlainTextLanguage;
         if (string.IsNullOrWhiteSpace(filePath)) return;
 
         IsContentLoading = true;
         try
         {
+            var language = SourceSyntaxClassifier.DetectLanguage(filePath);
+            DetectedLanguage = language == SourceLanguage.Unknown ? PlainTextLanguage : language.ToString();
+
             // Quote the path to handle spaces and special characters safely.
             var safePath = filePath.Replace("\"", "\\\"");
             var result = await _client.Advanced.RunRawAsync(_repoPath, $"show HEAD:\"{safePath}\"");
@@ -128,14 +142,15 @@ public sealed class FilesViewModel : ViewModelBase
             {
                 // Fallback: read from the working tree so newly staged / modified files are shown.
                 var fullPath = Path.GetFullPath(filePath, _repoPath);
-                if (File.Exists(fullPath))
+                var repoRoot = Path.GetFullPath(_repoPath).TrimEnd(Path.DirectorySeparatorChar) + Path.DirectorySeparatorChar;
+                if (fullPath.StartsWith(repoRoot, StringComparison.OrdinalIgnoreCase) && File.Exists(fullPath))
                     content = await File.ReadAllTextAsync(fullPath);
             }
 
             if (content == null) return;
 
             foreach (var line in content.Split('\n'))
-                ContentLines.Add(new FileLineViewModel(line, ClassifyLine(line)));
+                ContentLines.Add(new FileLineViewModel(line, ClassifyLine(line, language)));
         }
         finally
         {
@@ -155,43 +170,13 @@ public sealed class FilesViewModel : ViewModelBase
         }
     }
 
-    // ── Basic line-level syntax classification ────────────────────────────────
-
-    private static readonly string[] s_keywords =
-    [
-        "public", "private", "protected", "internal", "static", "readonly", "const",
-        "class", "interface", "struct", "enum", "namespace", "using", "void", "return",
-        "if", "else", "for", "foreach", "while", "do", "switch", "case", "break",
-        "continue", "new", "null", "true", "false", "var", "let", "const", "function",
-        "def", "import", "from", "async", "await", "try", "catch", "finally", "throw",
-    ];
-
     /// <summary>Classifies a single source line into a <see cref="FileLineKind"/>.</summary>
-    public static FileLineKind ClassifyLine(string line)
+    public static FileLineKind ClassifyLine(string line) =>
+        ClassifyLine(line, SourceLanguage.Unknown);
+
+    /// <summary>Classifies a single source line into a <see cref="FileLineKind"/> for a specific language.</summary>
+    public static FileLineKind ClassifyLine(string line, SourceLanguage language)
     {
-        var trimmed = line.TrimStart();
-
-        // Comment patterns (C#, Java, JS, Python, Ruby, Shell, SQL, CSS)
-        if (trimmed.StartsWith("//") || trimmed.StartsWith("#") ||
-            trimmed.StartsWith("*")  || trimmed.StartsWith("/*") ||
-            trimmed.StartsWith("--") || trimmed.StartsWith("<!--"))
-            return FileLineKind.Comment;
-
-        // String literals: line is predominantly a string assignment
-        if ((trimmed.Contains('"') || trimmed.Contains('\'')) &&
-            (trimmed.StartsWith("\"") || trimmed.StartsWith("'") ||
-             trimmed.Contains(" = \"") || trimmed.Contains(" = '")))
-            return FileLineKind.String;
-
-        // Keyword lines: starts with a known keyword
-        foreach (var kw in s_keywords)
-        {
-            if (trimmed.StartsWith(kw + " ") || trimmed.StartsWith(kw + "\t") ||
-                trimmed == kw)
-                return FileLineKind.Keyword;
-        }
-
-        return FileLineKind.Code;
+        return SourceSyntaxClassifier.ClassifyLine(line, language);
     }
 }
-
