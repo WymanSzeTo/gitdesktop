@@ -7,6 +7,15 @@
 
     <Application.Styles>
         <FluentTheme />
+        <Style Selector="Button.nav">
+            <Setter Property="Background" Value="{DynamicResource ThemeButtonBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemePrimaryText}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource ThemeBorderColor}"/>
+        </Style>
+        <Style Selector="Button.nav:pointerover">
+            <Setter Property="Background" Value="{DynamicResource ThemePanelBackground}"/>
+            <Setter Property="Foreground" Value="{DynamicResource ThemeAccentColor}"/>
+        </Style>
     </Application.Styles>
 
     <!-- Default Dark theme resources and font sizes.
@@ -49,6 +58,9 @@
         <SolidColorBrush x:Key="ThemeButtonBackground"  Color="#3c3c3c"/>
         <SolidColorBrush x:Key="ThemeButtonForeground"  Color="#d4d4d4"/>
         <SolidColorBrush x:Key="ThemeBorderColor"       Color="#3c3c3c"/>
+        <SolidColorBrush x:Key="ThemeSyntaxComment"     Color="#6A9955"/>
+        <SolidColorBrush x:Key="ThemeSyntaxKeyword"     Color="#C586C0"/>
+        <SolidColorBrush x:Key="ThemeSyntaxString"      Color="#CE9178"/>
     </Application.Resources>
 
 </Application>

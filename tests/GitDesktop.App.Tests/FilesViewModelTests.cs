@@ -95,6 +95,7 @@ public class FilesViewModelTests
 
         Assert.NotEmpty(vm.ContentLines);
         Assert.Equal("# My Project", vm.ContentLines[0].Content);
+        Assert.Equal("Markdown", vm.DetectedLanguage);
     }
 
     [Fact]
@@ -146,6 +147,7 @@ public class FilesViewModelTests
             // The fallback should have populated ContentLines from the disk file.
             Assert.NotEmpty(vm.ContentLines);
             Assert.Equal("hello from disk", vm.ContentLines[0].Content);
+            Assert.Equal("Plain text", vm.DetectedLanguage);
         }
         finally
         {
@@ -154,41 +156,67 @@ public class FilesViewModelTests
     }
 
     [Fact]
+    public async Task LoadFileContentAsync_PathEscapesRepository_DoesNotReadOutsideRepo()
+    {
+        var repoDir = Path.Combine(Path.GetTempPath(), $"GitDesktop_FV_{Guid.NewGuid():N}");
+        var outsideDir = Path.Combine(Path.GetTempPath(), $"GitDesktop_FV_{Guid.NewGuid():N}");
+        Directory.CreateDirectory(repoDir);
+        Directory.CreateDirectory(outsideDir);
+        await File.WriteAllTextAsync(Path.Combine(outsideDir, "secret.txt"), "should-not-read");
+
+        try
+        {
+            var mock = new MockGitExecutor();
+            mock.EnqueueFailure("fatal: Path not found", 128);
+
+            var vm = new FilesViewModel(new GitDesktopClient(mock), repoDir);
+            await vm.LoadFileContentAsync(Path.Combine("..", Path.GetFileName(outsideDir), "secret.txt"));
+
+            Assert.Empty(vm.ContentLines);
+        }
+        finally
+        {
+            Directory.Delete(repoDir, recursive: true);
+            Directory.Delete(outsideDir, recursive: true);
+        }
+    }
+
+    [Fact]
     public void ClassifyLine_CommentLine_ReturnsComment()
     {
-        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("// a comment"));
-        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("# shell comment"));
-        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("/* block */"));
-        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("-- SQL comment"));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("// a comment", SourceLanguage.CSharp));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("# shell comment", SourceLanguage.Shell));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("/* block */", SourceLanguage.JavaScript));
+        Assert.Equal(FileLineKind.Comment, FilesViewModel.ClassifyLine("-- SQL comment", SourceLanguage.Sql));
     }
 
     [Fact]
     public void ClassifyLine_KeywordLine_ReturnsKeyword()
     {
-        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("public class Foo"));
-        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("namespace MyApp"));
-        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("return value;"));
+        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("public class Foo", SourceLanguage.CSharp));
+        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("namespace MyApp", SourceLanguage.CSharp));
+        Assert.Equal(FileLineKind.Keyword, FilesViewModel.ClassifyLine("return value;", SourceLanguage.JavaScript));
     }
 
     [Fact]
     public void ClassifyLine_CodeLine_ReturnsCode()
     {
-        Assert.Equal(FileLineKind.Code, FilesViewModel.ClassifyLine("    x = 42;"));
-        Assert.Equal(FileLineKind.Code, FilesViewModel.ClassifyLine(""));
+        Assert.Equal(FileLineKind.Code, FilesViewModel.ClassifyLine("    x = 42;", SourceLanguage.CSharp));
+        Assert.Equal(FileLineKind.Code, FilesViewModel.ClassifyLine("", SourceLanguage.CSharp));
     }
 
     [Fact]
     public void FileLineViewModel_CommentKind_HasSecondaryTextKey()
     {
         var vm = new FileLineViewModel("// comment", FileLineKind.Comment);
-        Assert.Equal("ThemeSecondaryText", vm.ForegroundKey);
+        Assert.Equal("ThemeSyntaxComment", vm.ForegroundKey);
     }
 
     [Fact]
     public void FileLineViewModel_KeywordKind_HasAccentColorKey()
     {
         var vm = new FileLineViewModel("public class", FileLineKind.Keyword);
-        Assert.Equal("ThemeAccentColor", vm.ForegroundKey);
+        Assert.Equal("ThemeSyntaxKeyword", vm.ForegroundKey);
     }
 
     [Fact]
@@ -197,5 +225,12 @@ public class FilesViewModelTests
         var vm = new FileLineViewModel("    x = 1;", FileLineKind.Code);
         Assert.Equal("ThemePrimaryText", vm.ForegroundKey);
     }
-}
 
+    [Fact]
+    public void SourceSyntaxClassifier_DetectLanguage_FromExtension()
+    {
+        Assert.Equal(SourceLanguage.CSharp, SourceSyntaxClassifier.DetectLanguage("Program.cs"));
+        Assert.Equal(SourceLanguage.TypeScript, SourceSyntaxClassifier.DetectLanguage("main.ts"));
+        Assert.Equal(SourceLanguage.Unknown, SourceSyntaxClassifier.DetectLanguage("README"));
+    }
+}

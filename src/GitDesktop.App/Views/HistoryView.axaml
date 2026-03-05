@@ -1,18 +1,20 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="using:GitDesktop.App.ViewModels"
+             xmlns:conv="using:GitDesktop.App.Converters"
              x:Class="GitDesktop.App.Views.HistoryView"
              x:DataType="vm:HistoryViewModel">
 
     <Grid RowDefinitions="Auto,*">
 
         <!-- Toolbar -->
-        <Border Grid.Row="0" Background="#1e1e1e" Padding="12,8">
+        <Border Grid.Row="0" Background="{DynamicResource ThemePanelBackground}" Padding="12,8">
             <StackPanel Orientation="Horizontal" Spacing="8">
-                <TextBlock Text="Commit History" FontWeight="Bold" FontSize="14"
+                <TextBlock Text="Commit History" FontWeight="Bold" FontSize="{DynamicResource AppFontSizeLarge}"
+                           Foreground="{DynamicResource ThemePrimaryText}"
                            VerticalAlignment="Center"/>
                 <Button Content="↻ Refresh" Command="{Binding RefreshCommand}" Margin="8,0,0,0"/>
-                <Separator Width="1" Background="#555" Margin="4,0"/>
+                <Separator Width="1" Background="{DynamicResource ThemeBorderColor}" Margin="4,0"/>
                 <Button Content="Cherry-pick"
                         Command="{Binding CherryPickCommand}"
                         CommandParameter="{Binding SelectedCommit}"
@@ -25,8 +27,9 @@
                         Command="{Binding ResetToCommitCommand}"
                         CommandParameter="{Binding SelectedCommit}"
                         ToolTip.Tip="Reset HEAD to the selected commit (mixed)" Padding="6,2"
-                        Foreground="#f48771"/>
-                <TextBlock Text="{Binding StatusMessage}" Foreground="#888" FontSize="12"
+                        Foreground="{DynamicResource ThemeRemovedForeground}"/>
+                <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource ThemeSecondaryText}"
+                           FontSize="{DynamicResource AppFontSizeSmall}"
                            VerticalAlignment="Center" Margin="8,0,0,0"
                            IsVisible="{Binding StatusMessage, Converter={x:Static ObjectConverters.IsNotNull}}"/>
             </StackPanel>
@@ -39,24 +42,25 @@
             <ListBox Grid.Column="0"
                      ItemsSource="{Binding Commits}"
                      SelectedItem="{Binding SelectedCommit}"
-                     Background="#1e1e1e">
+                     Background="{DynamicResource ThemeContentBackground}">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Spacing="2" Margin="0,2">
                             <StackPanel Orientation="Horizontal" Spacing="8">
                                 <TextBlock Text="{Binding ShortHash}"
-                                           Foreground="#569cd6"
+                                           Foreground="{DynamicResource ThemeAccentColor}"
                                            FontFamily="Cascadia Code,Consolas,monospace"
-                                           FontSize="12" VerticalAlignment="Center"/>
+                                           FontSize="{DynamicResource AppFontSizeSmall}" VerticalAlignment="Center"/>
                                 <TextBlock Text="{Binding AuthorDate, StringFormat='{}{0:yyyy-MM-dd}'}"
-                                           Foreground="#888" FontSize="11"
+                                           Foreground="{DynamicResource ThemeSecondaryText}" FontSize="{DynamicResource AppFontSizeSmall}"
                                            VerticalAlignment="Center"/>
                             </StackPanel>
                             <TextBlock Text="{Binding Subject}"
+                                       Foreground="{DynamicResource ThemePrimaryText}"
                                        TextTrimming="CharacterEllipsis"
                                        ToolTip.Tip="{Binding Subject}"/>
                             <TextBlock Text="{Binding AuthorName}"
-                                       Foreground="#888" FontSize="11"/>
+                                       Foreground="{DynamicResource ThemeSecondaryText}" FontSize="{DynamicResource AppFontSizeSmall}"/>
                         </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
@@ -64,30 +68,50 @@
 
             <!-- Diff / commit details -->
             <Grid Grid.Column="1" RowDefinitions="Auto,*">
-                <Border Grid.Row="0" Background="#252526" Padding="12,8"
+                <Border Grid.Row="0" Background="{DynamicResource ThemePanelBackground}" Padding="12,8"
                         IsVisible="{Binding SelectedCommit, Converter={x:Static ObjectConverters.IsNotNull}}">
                     <StackPanel Spacing="4">
                         <TextBlock Text="{Binding SelectedCommit.Subject}"
-                                   FontWeight="Bold" TextWrapping="Wrap"/>
+                                   FontWeight="Bold" TextWrapping="Wrap"
+                                   Foreground="{DynamicResource ThemePrimaryText}"/>
                         <StackPanel Orientation="Horizontal" Spacing="12">
-                            <TextBlock Text="{Binding SelectedCommit.AuthorName}" Foreground="#4ec9b0"/>
+                            <TextBlock Text="{Binding SelectedCommit.AuthorName}" Foreground="{DynamicResource ThemeBranchColor}"/>
                             <TextBlock Text="{Binding SelectedCommit.AuthorDate, StringFormat='{}{0:yyyy-MM-dd HH:mm}'}"
-                                       Foreground="#888"/>
+                                       Foreground="{DynamicResource ThemeSecondaryText}"/>
                             <TextBlock Text="{Binding SelectedCommit.Hash}"
-                                       Foreground="#569cd6"
+                                       Foreground="{DynamicResource ThemeAccentColor}"
                                        FontFamily="Cascadia Code,Consolas,monospace"
-                                       FontSize="11"/>
+                                       FontSize="{DynamicResource AppFontSizeSmall}"/>
+                            <Border Background="{DynamicResource ThemePanelBackground}"
+                                    BorderBrush="{DynamicResource ThemeBorderColor}"
+                                    BorderThickness="1"
+                                    CornerRadius="4"
+                                    Padding="6,1">
+                                <TextBlock Text="{Binding DetectedDiffLanguage}"
+                                           Foreground="{DynamicResource ThemeSecondaryText}"
+                                           FontSize="{DynamicResource AppFontSizeSmall}"/>
+                            </Border>
                         </StackPanel>
                         <TextBlock Text="{Binding SelectedCommit.Body}"
-                                   TextWrapping="Wrap" Foreground="#ccc"
-                                   IsVisible="{Binding SelectedCommit.Body, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
+                                   TextWrapping="Wrap" Foreground="{DynamicResource ThemePrimaryText}"
+                                    IsVisible="{Binding SelectedCommit.Body, Converter={x:Static StringConverters.IsNotNullOrEmpty}}"/>
                     </StackPanel>
                 </Border>
-                <ScrollViewer Grid.Row="1" Background="#1e1e1e">
-                    <TextBlock Text="{Binding SelectedCommitDiff}"
-                               FontFamily="Cascadia Code,Consolas,monospace"
-                               FontSize="12" TextWrapping="NoWrap"
-                               Margin="8"/>
+                <ScrollViewer Grid.Row="1" Background="{DynamicResource ThemeContentBackground}" HorizontalScrollBarVisibility="Auto">
+                    <ItemsControl ItemsSource="{Binding SelectedCommitDiffLines}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate x:DataType="vm:HistoryDiffLineViewModel">
+                                <Border Background="{Binding BackgroundKey, Converter={StaticResource ResourceKeyBrushConverter}}">
+                                    <TextBlock Text="{Binding Content}"
+                                               Foreground="{Binding ForegroundKey, Converter={StaticResource ResourceKeyBrushConverter}}"
+                                               FontFamily="Cascadia Code,Consolas,monospace"
+                                               FontSize="{DynamicResource AppFontSize}"
+                                               TextWrapping="NoWrap"
+                                               Margin="8,0"/>
+                                </Border>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </ScrollViewer>
             </Grid>
 

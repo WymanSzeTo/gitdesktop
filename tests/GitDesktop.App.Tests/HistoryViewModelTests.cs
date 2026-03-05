@@ -1,6 +1,7 @@
 using GitDesktop.App.ViewModels;
 using GitDesktop.Core;
 using GitDesktop.Core.Execution;
+using GitDesktop.Core.Models;
 
 namespace GitDesktop.App.Tests;
 
@@ -69,5 +70,26 @@ public class HistoryViewModelTests
         var vm = new HistoryViewModel(new GitDesktopClient(mock), "/repo");
 
         Assert.Null(vm.StatusMessage);
+    }
+
+    [Fact]
+    public async Task SelectedCommit_Set_BuildsDiffLines()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess("diff --git a/a.cs b/a.cs\n+++ b/a.cs\n@@ -1 +1 @@\n+public class Foo {}\n");
+        var vm = new HistoryViewModel(new GitDesktopClient(mock), "/repo");
+
+        vm.SelectedCommit = new GitDesktop.Core.Models.Commit { Hash = "abc1234", Subject = "Test" };
+        await Task.Delay(25);
+
+        Assert.NotEmpty(vm.SelectedCommitDiffLines);
+        Assert.Equal("CSharp", vm.DetectedDiffLanguage);
+    }
+
+    [Fact]
+    public void HistoryDiffLineViewModel_ContextKeyword_UsesSyntaxColor()
+    {
+        var vm = new HistoryDiffLineViewModel("public class Foo", DiffLineType.Context, FileLineKind.Keyword);
+        Assert.Equal("ThemeSyntaxKeyword", vm.ForegroundKey);
     }
 }

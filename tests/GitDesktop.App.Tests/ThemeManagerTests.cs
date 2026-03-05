@@ -97,4 +97,16 @@ public class ThemeManagerTests
             Assert.NotEqual(t.AddedForeground, t.RemovedForeground);
         }
     }
+
+    [Fact]
+    public void AllThemes_DefineSyntaxColors()
+    {
+        foreach (var name in ThemeManager.ThemeNames)
+        {
+            var t = ThemeManager.GetTheme(name);
+            Assert.NotEqual(default, t.SyntaxComment);
+            Assert.NotEqual(default, t.SyntaxKeyword);
+            Assert.NotEqual(default, t.SyntaxString);
+        }
+    }
 }

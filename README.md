@@ -12,7 +12,8 @@ Use .Net 10 (major in C#) to develop Git Desktop Client covering all the functio
 - **Saved repositories** — repositories are remembered across sessions via a JSON configuration file.
 - **Session restore** — all tabs open when the app was last closed are re-opened automatically on the next launch, with the previously active tab pre-selected.
 - **Diff highlighting** — staged/unstaged file diffs are shown with syntax-highlighted Add / Delete / Context lines in the Status view.
-- **Repository file list** — browse all tracked files in the active repository with an instant filter.
+- **Language-aware code highlighting** — Files and History views detect source language by file extension and apply syntax-aware colouring.
+- **Repository file list** — browse all tracked files in the active repository with an instant filter and detected-language badge.
 - **5 colour themes** — Dark (default), Light, Monokai, Solarized Dark, and Nord.  Switch live from the toolbar.
 - **Adjustable font size** — scale the UI font from the toolbar; the setting is persisted automatically.
 
@@ -41,9 +42,9 @@ To **rename** an open tab, edit the value in the **TAB NAME** field at the botto
 | View | Features |
 |------|----------|
 | **Status** | Staged/unstaged/untracked files, stage/unstage, commit, amend, discard; select a file to view a colour-coded diff |
-| **Files** | Filterable list of all tracked files in the repository |
+| **Files** | Filterable list of tracked files with language detection and syntax-aware content rendering |
 | **Branches** | List local and remote branches, create, switch, delete, rename, merge |
-| **History** | Commit log with diff preview, cherry-pick, revert, reset |
+| **History** | Commit log with syntax-coloured diff preview, cherry-pick, revert, reset |
 | **Tags** | List tags, create lightweight and annotated tags, delete tags |
 | **Remotes** | List remotes, add, remove remotes |
 | **Stash** | List stashes with diff preview, push, apply, pop, drop stashes |
@@ -94,4 +95,3 @@ dotnet run --project src/GitDesktop.Cli -- help
 dotnet build GitDesktop.slnx
 dotnet test
 ```
-
