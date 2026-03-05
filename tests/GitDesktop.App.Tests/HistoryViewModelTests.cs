@@ -92,4 +92,17 @@ public class HistoryViewModelTests
         var vm = new HistoryDiffLineViewModel("public class Foo", DiffLineType.Context, FileLineKind.Keyword);
         Assert.Equal("ThemeSyntaxKeyword", vm.ForegroundKey);
     }
+
+    [Fact]
+    public async Task SelectedCommit_WithMultipleFileLanguages_SetsMixedLanguage()
+    {
+        var mock = new MockGitExecutor();
+        mock.EnqueueSuccess("diff --git a/a.cs b/a.cs\n+++ b/a.cs\n+public class Foo {}\ndiff --git a/b.py b/b.py\n+++ b/b.py\n+def bar():\n");
+        var vm = new HistoryViewModel(new GitDesktopClient(mock), "/repo");
+
+        vm.SelectedCommit = new Commit { Hash = "abc9999", Subject = "Test" };
+        await Task.Delay(25);
+
+        Assert.Equal("Mixed", vm.DetectedDiffLanguage);
+    }
 }

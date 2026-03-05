@@ -12,14 +12,17 @@ namespace GitDesktop.App.ViewModels;
 /// </summary>
 public sealed class HistoryViewModel : ViewModelBase
 {
+    private const string UnknownLanguageLabel = "Unknown";
+    private const string MixedLanguageLabel = "Mixed";
+
     private readonly GitDesktopClient _client;
     private readonly string _repoPath;
     private bool _isLoading;
     private Commit? _selectedCommit;
     private string? _selectedCommitDiff;
     private string? _statusMessage;
-    private string _detectedDiffLanguage = "Mixed";
-    private static readonly Regex s_diffFileRegex = new(@"^\+\+\+ b/(.+)$", RegexOptions.Compiled);
+    private string _detectedDiffLanguage = UnknownLanguageLabel;
+    private static readonly Regex s_diffFileRegex = new(@"^\+\+\+ b/(.+)$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public HistoryViewModel(GitDesktopClient client, string repoPath)
     {
@@ -124,11 +127,12 @@ public sealed class HistoryViewModel : ViewModelBase
     private void BuildDiffLines(string? diffText)
     {
         SelectedCommitDiffLines.Clear();
-        DetectedDiffLanguage = "Mixed";
+        DetectedDiffLanguage = UnknownLanguageLabel;
         if (string.IsNullOrWhiteSpace(diffText))
             return;
 
         var currentLanguage = SourceLanguage.Unknown;
+        var encounteredLanguages = new HashSet<SourceLanguage>();
         foreach (var rawLine in diffText.Split('\n'))
         {
             var lineType = rawLine.Length == 0
@@ -150,7 +154,8 @@ public sealed class HistoryViewModel : ViewModelBase
                 if (match.Success)
                 {
                     currentLanguage = SourceSyntaxClassifier.DetectLanguage(match.Groups[1].Value);
-                    DetectedDiffLanguage = currentLanguage == SourceLanguage.Unknown ? "Mixed" : currentLanguage.ToString();
+                    if (currentLanguage != SourceLanguage.Unknown)
+                        encounteredLanguages.Add(currentLanguage);
                 }
             }
 
@@ -163,6 +168,13 @@ public sealed class HistoryViewModel : ViewModelBase
 
             SelectedCommitDiffLines.Add(new HistoryDiffLineViewModel(rawLine, lineType, syntaxKind));
         }
+
+        DetectedDiffLanguage = encounteredLanguages.Count switch
+        {
+            0 => UnknownLanguageLabel,
+            1 => encounteredLanguages.First().ToString(),
+            _ => MixedLanguageLabel,
+        };
     }
 
     private async Task CherryPickAsync(Commit? commit)

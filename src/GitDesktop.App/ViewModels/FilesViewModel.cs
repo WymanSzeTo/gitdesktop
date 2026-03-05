@@ -12,13 +12,15 @@ namespace GitDesktop.App.ViewModels;
 /// </summary>
 public sealed class FilesViewModel : ViewModelBase
 {
+    private const string PlainTextLanguage = "Plain text";
+
     private readonly GitDesktopClient _client;
     private readonly string _repoPath;
     private bool _isLoading;
     private bool _isContentLoading;
     private string _filterText = string.Empty;
     private string? _selectedFile;
-    private string _detectedLanguage = "Plain text";
+    private string _detectedLanguage = PlainTextLanguage;
 
     public FilesViewModel(GitDesktopClient client, string repoPath)
     {
@@ -118,14 +120,14 @@ public sealed class FilesViewModel : ViewModelBase
     public async Task LoadFileContentAsync(string? filePath)
     {
         ContentLines.Clear();
-        DetectedLanguage = "Plain text";
+        DetectedLanguage = PlainTextLanguage;
         if (string.IsNullOrWhiteSpace(filePath)) return;
 
         IsContentLoading = true;
         try
         {
             var language = SourceSyntaxClassifier.DetectLanguage(filePath);
-            DetectedLanguage = language == SourceLanguage.Unknown ? "Plain text" : language.ToString();
+            DetectedLanguage = language == SourceLanguage.Unknown ? PlainTextLanguage : language.ToString();
 
             // Quote the path to handle spaces and special characters safely.
             var safePath = filePath.Replace("\"", "\\\"");

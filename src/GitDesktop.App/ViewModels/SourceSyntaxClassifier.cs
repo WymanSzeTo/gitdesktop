@@ -74,11 +74,18 @@ public static class SourceSyntaxClassifier
         };
 
     private static bool IsString(string trimmed) =>
-        (trimmed.Contains('"') || trimmed.Contains('\'')) &&
+        HasLikelyStringLiteral(trimmed) &&
         (trimmed.StartsWith("\"") || trimmed.StartsWith("'") ||
          trimmed.Contains(" = \"", StringComparison.Ordinal) ||
          trimmed.Contains(" = '", StringComparison.Ordinal) ||
          trimmed.Contains(": \"", StringComparison.Ordinal));
+
+    private static bool HasLikelyStringLiteral(string trimmed)
+    {
+        var dbl = trimmed.Count(c => c == '"');
+        var sgl = trimmed.Count(c => c == '\'');
+        return dbl >= 2 || sgl >= 2 || trimmed.StartsWith("\"") || trimmed.StartsWith("'");
+    }
 
     private static bool StartsWithKeyword(string trimmed, SourceLanguage language)
     {
